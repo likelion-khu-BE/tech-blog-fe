@@ -10,6 +10,9 @@ onMounted(async () => {
   const canvas = canvasRef.value
   if (!canvas) return
 
+  // 텍스트 애니메이션(~1.2s)이 끝난 후 Three.js 로드 — 메인 스레드 경합 방지
+  await new Promise((r) => setTimeout(r, 1500))
+
   const THREE = await import('three')
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100)
