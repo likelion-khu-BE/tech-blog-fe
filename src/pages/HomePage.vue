@@ -6,13 +6,15 @@ import { members, findMember } from '../data/members'
 import HeroScene from '../components/HeroScene.vue'
 import MemberAvatar from '../components/MemberAvatar.vue'
 
-const visible = ref(false)
+const canAnimate = !!sessionStorage.getItem('visited')
+const visible = ref(!canAnimate)
 const sectionsVisible = ref<Record<string, boolean>>({})
 
 onMounted(async () => {
-  // 폰트 로드 완료 후 애니메이션 시작 — 새 세션에서 font swap jank 방지
-  await document.fonts.ready
-  requestAnimationFrame(() => { visible.value = true })
+  sessionStorage.setItem('visited', '1')
+  if (canAnimate) {
+    requestAnimationFrame(() => { visible.value = true })
+  }
   await nextTick()
   setupObserver()
 })
@@ -53,30 +55,34 @@ const recentArticles = articles.slice(0, 4)
 
       <div class="relative z-10 max-w-[900px] w-full mx-auto px-4 md:px-5 text-center md:text-left">
         <p
-          class="text-sm text-text-tertiary tracking-tight mb-6 transition-all duration-700 ease-out"
-          :class="visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
-          :style="{ transitionDelay: '200ms' }"
+          class="text-sm text-text-tertiary tracking-tight mb-6"
+          :class="canAnimate
+            ? [visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3', 'transition-all duration-700 ease-out delay-200']
+            : 'hero-light hero-light-1'"
         >
           멋쟁이사자처럼 경희대학교 기술블로그
         </p>
 
         <h1
-          class="text-2xl md:text-5xl font-bold text-text-primary tracking-tight leading-[1.2] break-keep transition-all duration-1000 ease-out"
-          :class="visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
-          :style="{ transitionDelay: '500ms' }"
+          class="text-2xl md:text-5xl font-bold text-text-primary tracking-tight leading-[1.2] break-keep"
+          :class="canAnimate
+            ? [visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4', 'transition-all duration-1000 ease-out delay-500']
+            : 'hero-light hero-light-2'"
         >
           <span
-            class="text-accent-primary inline-block transition-all duration-700 ease-out"
-            :class="visible ? 'opacity-100 scale-100' : 'opacity-0 scale-90'"
-            :style="{ transitionDelay: '900ms' }"
+            class="text-accent-primary"
+            :class="canAnimate
+              ? ['inline-block', visible ? 'opacity-100 scale-100' : 'opacity-0 scale-90', 'transition-all duration-700 ease-out delay-[900ms]']
+              : 'hero-light hero-light-3'"
           >"왜?"</span>를 파고드는<br />엔지니어링 기록
         </h1>
 
         <router-link
           to="/articles"
-          class="inline-flex items-center gap-1.5 mt-10 md:mt-16 text-sm text-text-secondary hover:text-accent-primary transition-all duration-700 ease-out group/cta"
-          :class="visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
-          :style="{ transitionDelay: '1200ms' }"
+          class="inline-flex items-center gap-1.5 mt-10 md:mt-16 text-sm text-text-secondary hover:text-accent-primary group/cta"
+          :class="canAnimate
+            ? [visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3', 'transition-all duration-700 ease-out delay-[1200ms]']
+            : 'hero-light hero-light-4'"
         >
           아티클 읽으러 가기
           <span class="inline-block transition-transform group-hover/cta:translate-x-1">&rarr;</span>
@@ -223,6 +229,21 @@ const recentArticles = articles.slice(0, 4)
 </template>
 
 <style scoped>
+@keyframes hero-light-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.hero-light {
+  opacity: 0;
+  animation: hero-light-fade 0.4s ease-out forwards;
+}
+
+.hero-light-1 { animation-delay: 0.1s; }
+.hero-light-2 { animation-delay: 0.2s; }
+.hero-light-3 { animation-delay: 0.35s; }
+.hero-light-4 { animation-delay: 0.5s; }
+
 .line-clamp {
   display: -webkit-box;
   -webkit-line-clamp: 2;

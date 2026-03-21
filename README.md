@@ -1,5 +1,7 @@
 # KHU LikeLion Tech Blog — Frontend
 
+🔗 **[khu-tech.blog](https://www.khu-tech.blog)**
+
 멋쟁이사자처럼 경희대학교 기술블로그의 프론트엔드 레포지토리입니다.
 
 ## Tech Stack
