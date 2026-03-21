@@ -101,6 +101,11 @@ onMounted(async () => {
 
   window.addEventListener('resize', onResize)
 
+  // 레이아웃 확정 후 크기 재조정
+  requestAnimationFrame(onResize)
+  setTimeout(onResize, 100)
+  setTimeout(onResize, 500)
+
   onUnmounted(() => {
     cancelAnimationFrame(raf)
     window.removeEventListener('resize', onResize)
