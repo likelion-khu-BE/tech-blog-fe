@@ -10,6 +10,21 @@ onMounted(async () => {
   const canvas = canvasRef.value
   if (!canvas) return
 
+  // canvas 크기가 확정될 때까지 대기
+  await new Promise<void>((resolve) => {
+    if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
+      resolve()
+    } else {
+      const ro = new ResizeObserver(() => {
+        if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
+          ro.disconnect()
+          resolve()
+        }
+      })
+      ro.observe(canvas)
+    }
+  })
+
   const THREE = await import('three')
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100)
