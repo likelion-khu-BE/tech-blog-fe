@@ -15,9 +15,7 @@ onMounted(() => {
 })
 
 watch(() => route.params.id, () => {
-  visible.value = false
   window.scrollTo(0, 0)
-  requestAnimationFrame(() => { visible.value = true })
 })
 
 const member = computed(() => findMember(route.params.id as string))
