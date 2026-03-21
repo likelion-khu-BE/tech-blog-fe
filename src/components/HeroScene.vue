@@ -10,24 +10,9 @@ onMounted(async () => {
   const canvas = canvasRef.value
   if (!canvas) return
 
-  // canvas 크기가 확정될 때까지 대기
-  await new Promise<void>((resolve) => {
-    if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
-      resolve()
-    } else {
-      const ro = new ResizeObserver(() => {
-        if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
-          ro.disconnect()
-          resolve()
-        }
-      })
-      ro.observe(canvas)
-    }
-  })
-
   const THREE = await import('three')
   const scene = new THREE.Scene()
-  const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100)
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100)
   camera.position.z = 4
 
   renderer = new THREE.WebGLRenderer({
@@ -36,7 +21,6 @@ onMounted(async () => {
     alpha: true,
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  renderer.setSize(canvas.clientWidth, canvas.clientHeight)
 
   const geometry = new THREE.IcosahedronGeometry(1.2, 1)
   const material = new THREE.MeshBasicMaterial({
@@ -78,7 +62,23 @@ onMounted(async () => {
 
   loaded.value = true
 
+  let lastW = 0
+  let lastH = 0
+
   function animate() {
+    // 매 프레임 크기 체크 — CSS 크기와 renderer 동기화
+    const w = canvas.clientWidth
+    const h = canvas.clientHeight
+    if (w !== lastW || h !== lastH) {
+      lastW = w
+      lastH = h
+      if (w > 0 && h > 0) {
+        renderer.setSize(w, h, false)
+        camera.aspect = w / h
+        camera.updateProjectionMatrix()
+      }
+    }
+
     mesh.rotation.x += 0.002
     mesh.rotation.y += 0.003
     innerMesh.rotation.x -= 0.003
@@ -90,25 +90,8 @@ onMounted(async () => {
 
   animate()
 
-  function onResize() {
-    if (!canvas || !renderer) return
-    const w = canvas.clientWidth
-    const h = canvas.clientHeight
-    camera.aspect = w / h
-    camera.updateProjectionMatrix()
-    renderer.setSize(w, h)
-  }
-
-  window.addEventListener('resize', onResize)
-
-  // 레이아웃 확정 후 크기 재조정
-  requestAnimationFrame(onResize)
-  setTimeout(onResize, 100)
-  setTimeout(onResize, 500)
-
   onUnmounted(() => {
     cancelAnimationFrame(raf)
-    window.removeEventListener('resize', onResize)
     renderer?.dispose()
     geometry.dispose()
     material.dispose()
