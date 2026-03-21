@@ -1,3 +1,7 @@
+// 14기 멤버 데이터
+// part: 소속 파트 (백엔드/프론트엔드/AI)
+// avatar: 빈 문자열이면 MemberAvatar가 이니셜 원형으로 표시
+// logs: "공부한 것" 기록 (성과/기여가 아닌 탐구 톤)
 export interface StudyLog {
   title: string
   description: string
@@ -257,7 +261,7 @@ export const members: Member[] = [
     articles: ['oauth2-flow-implementation'],
   },
 
-  // ━━━ AI 파트 ━━━
+  // AI 파트
   {
     id: 'sieun-park',
     name: '박시은',
@@ -404,7 +408,7 @@ export const members: Member[] = [
     articles: [],
   },
 
-  // ━━━ 프론트엔드 파트 ━━━
+  // 프론트엔드 파트
   {
     id: 'chaewon-kim',
     name: '김채원',

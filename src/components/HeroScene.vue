@@ -1,3 +1,8 @@
+<!--
+  히어로 3D 배경 — Three.js 이코사헤드론 2중 구조 + 파티클
+  dynamic import로 lazy load, 로딩 완료 시 fade-in
+  매 프레임 canvas 크기를 체크하여 CSS 레이아웃과 자동 동기화
+-->
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 

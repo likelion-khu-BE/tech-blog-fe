@@ -1,3 +1,4 @@
+<!-- 푸터 — 제작 크레딧 (팀별 구분, 이름 클릭 시 멤버 상세로 이동) -->
 <script setup lang="ts">
 import { members } from '../data/members'
 

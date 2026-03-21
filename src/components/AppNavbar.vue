@@ -1,3 +1,4 @@
+<!-- 네비게이션 바 — 홈에서는 투명, 스크롤 시 blur 배경 -->
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'

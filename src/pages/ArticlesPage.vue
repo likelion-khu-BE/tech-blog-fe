@@ -1,3 +1,4 @@
+<!-- 아티클 목록 페이지 — 카테고리 필터 + NEW 뱃지(3일 이내, 쿠키 읽음 처리) -->
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { articles, categories } from '../data/mock'

@@ -1,3 +1,5 @@
+// 과거 기수 멤버 (이스터에그) — IT 대가들로 구성
+// 경희대 백엔드 파트는 14기에 신설, 12/13기는 존재하지 않음
 export interface LegacyMember {
   id: string
   name: string
@@ -11,7 +13,7 @@ export interface LegacyMember {
 }
 
 export const legacyMembers: LegacyMember[] = [
-  // ━━━ 13기 ━━━
+  // 13기 (이스터에그)
   // 파트장 맨 위
   {
     id: 'linus-torvalds',
@@ -75,7 +77,7 @@ export const legacyMembers: LegacyMember[] = [
     achievements: ['아폴로 11호 온보드 소프트웨어 개발', '소프트웨어 공학 용어 창시'],
   },
 
-  // ━━━ 12기 ━━━
+  // 12기 (이스터에그)
   // 파트장 맨 위
   {
     id: 'alan-turing',

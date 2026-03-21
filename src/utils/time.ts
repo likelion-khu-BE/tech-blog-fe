@@ -1,3 +1,4 @@
+/** 날짜를 상대 시간 문자열로 변환 (예: "3일 전", "2개월 전") */
 export function timeAgo(dateStr: string): string {
   const now = new Date()
   const date = new Date(dateStr)

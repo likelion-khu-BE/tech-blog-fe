@@ -1,3 +1,4 @@
+<!-- 14기 멤버 상세 페이지 — 탐구 기록 + 관심 분야 + 작성 아티클 -->
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'

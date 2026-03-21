@@ -1,3 +1,5 @@
+// 아티클 더미 데이터 — 실제 백엔드 API 연동 전까지 사용
+// authorId는 members.ts의 Member.id와 매칭
 export interface Article {
   slug: string
   title: string

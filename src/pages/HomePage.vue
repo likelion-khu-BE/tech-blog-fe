@@ -6,6 +6,8 @@ import { members, findMember } from '../data/members'
 import HeroScene from '../components/HeroScene.vue'
 import MemberAvatar from '../components/MemberAvatar.vue'
 
+// 첫 방문 시 transition 대신 @keyframes 경량 애니메이션 사용
+// 이유: 첫 방문에서 CSS/JS/폰트 동시 로드 시 transition 프레임 드롭 발생
 const canAnimate = !!sessionStorage.getItem('visited')
 const visible = ref(!canAnimate)
 const sectionsVisible = ref<Record<string, boolean>>({})
@@ -19,6 +21,7 @@ onMounted(async () => {
   setupObserver()
 })
 
+// 스크롤 진입 시 섹션별 fade-in 트리거
 let observer: IntersectionObserver | null = null
 
 function setupObserver() {
@@ -40,19 +43,20 @@ function setupObserver() {
 onUnmounted(() => observer?.disconnect())
 
 const recentArticles = articles.slice(0, 4)
-
 </script>
 
 <template>
   <main>
 
-    <!-- ━━━ Hero ━━━ -->
+    <!-- 히어로: 100svh 풀스크린, 3D는 우측에 배치 -->
     <section class="relative h-[100svh] flex items-center overflow-hidden">
       <div class="absolute top-0 right-0 w-full md:w-[55%] h-full z-0">
         <HeroScene />
       </div>
+      <!-- 모바일: 반투명 오버레이로 텍스트 가독성 확보 / 데스크탑: 좌→우 그라데이션 -->
       <div class="absolute inset-0 z-[1] bg-bg-primary/70 md:bg-transparent md:bg-gradient-to-r md:from-bg-primary md:via-bg-primary/80 md:to-transparent" />
 
+      <!-- 모바일: text-center / 데스크탑: text-left -->
       <div class="relative z-10 max-w-[900px] w-full mx-auto px-4 md:px-5 text-center md:text-left">
         <p
           class="text-sm text-text-tertiary tracking-tight mb-6"
@@ -89,6 +93,7 @@ const recentArticles = articles.slice(0, 4)
         </router-link>
       </div>
 
+      <!-- 스크롤 유도 -->
       <div
         class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 transition-opacity duration-1000 delay-[1500ms]"
         :class="visible ? 'opacity-100' : 'opacity-0'"
@@ -99,7 +104,7 @@ const recentArticles = articles.slice(0, 4)
       </div>
     </section>
 
-    <!-- ━━━ 왜? (2x2 압축) ━━━ -->
+    <!-- 공부 방식: 2x2 그리드, bg-secondary로 시각 리듬 -->
     <section
       id="why"
       data-animate
@@ -115,6 +120,7 @@ const recentArticles = articles.slice(0, 4)
             { q: '서로의 코드를 읽는다', a: 'PR 코멘트 하나가 습관을 바꿔줍니다. 혼자였으면 몰랐을 것들을 리뷰에서 발견합니다. 가장 많이 배우는 시간은 다른 사람의 코드를 읽을 때입니다.' },
             { q: '아티클로 남긴다', a: '이해했다고 생각한 것을 쓰려니 설명할 수 없었습니다. 그 빈틈을 채우는 과정이 진짜 공부입니다.' },
           ]" :key="item.q">
+            <!-- stagger: 각 항목이 120ms 간격으로 순차 등장 -->
             <div
               class="transition-all duration-500 ease-out"
               :class="sectionsVisible['why'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
@@ -128,7 +134,7 @@ const recentArticles = articles.slice(0, 4)
       </div>
     </section>
 
-    <!-- ━━━ 멤버 넛지 ━━━ -->
+    <!-- 멤버 넛지: 전체 리스트 대신 아바타로 존재감만, /members로 유도 -->
     <section
       id="team"
       data-animate
@@ -139,7 +145,7 @@ const recentArticles = articles.slice(0, 4)
       <p class="text-sm text-text-tertiary mt-1">14기 · {{ members.length }}명</p>
 
       <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mt-6">
-        <!-- 데스크탑: 아바타 겹침 -->
+        <!-- 데스크탑: 아바타 겹침 + stagger -->
         <router-link to="/members" class="hidden sm:flex -space-x-2 hover:opacity-80 transition-opacity">
           <MemberAvatar
             v-for="(m, i) in members"
@@ -153,7 +159,7 @@ const recentArticles = articles.slice(0, 4)
           />
         </router-link>
 
-        <!-- 모바일: 컨베이어 벨트 -->
+        <!-- 모바일: 아바타가 넘치므로 우→좌 무한 스크롤 -->
         <router-link to="/members" class="sm:hidden block overflow-hidden">
           <div class="marquee-track flex gap-1.5">
             <MemberAvatar
@@ -177,7 +183,7 @@ const recentArticles = articles.slice(0, 4)
       </div>
     </section>
 
-    <!-- ━━━ 최근 아티클 ━━━ -->
+    <!-- 최근 아티클: stagger로 순차 등장 -->
     <section
       id="articles"
       data-animate
@@ -229,6 +235,7 @@ const recentArticles = articles.slice(0, 4)
 </template>
 
 <style scoped>
+/* 첫 방문용 경량 애니메이션 — @keyframes는 GPU에서 독립 실행되어 메인 스레드 부하에 강함 */
 @keyframes hero-light-fade {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -251,6 +258,7 @@ const recentArticles = articles.slice(0, 4)
   overflow: hidden;
 }
 
+/* 모바일 아바타 무한 스크롤 — 멤버를 2벌 복제해서 끊김 없는 루프 */
 @keyframes marquee {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
@@ -260,6 +268,7 @@ const recentArticles = articles.slice(0, 4)
   animation: marquee 20s linear infinite;
 }
 
+/* 히어로 하단 스크롤 유도 dot */
 @keyframes scroll-dot {
   0%, 100% { opacity: 0; transform: translateY(0); }
   50% { opacity: 1; transform: translateY(4px); }

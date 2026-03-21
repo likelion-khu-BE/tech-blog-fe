@@ -1,3 +1,8 @@
+<!--
+  멤버 아바타 컴포넌트
+  avatar URL이 있으면 이미지, 없으면 이름 첫 글자 이니셜 원형 표시
+  색상은 이름 해시 기반으로 고정 — 같은 사람은 항상 같은 색
+-->
 <script setup lang="ts">
 const props = defineProps<{
   name: string

@@ -1,3 +1,4 @@
+<!-- 과거 기수 멤버(IT 대가) 상세 페이지 — 이스터에그 -->
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'

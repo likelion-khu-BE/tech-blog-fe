@@ -1,3 +1,4 @@
+<!-- 404 페이지 — 와이어프레임 토러스 3D + 홈으로 링크 -->
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 

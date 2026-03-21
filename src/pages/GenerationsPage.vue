@@ -1,3 +1,4 @@
+<!-- 기수별 멤버 페이지 — 기수 탭 + 파트 필터(14기만) + 3D 토러스노트 배경 -->
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import MemberAvatar from '../components/MemberAvatar.vue'
