@@ -10,6 +10,8 @@ const visible = ref(false)
 const sectionsVisible = ref<Record<string, boolean>>({})
 
 onMounted(async () => {
+  // 폰트 로드 완료 후 애니메이션 시작 — 새 세션에서 font swap jank 방지
+  await document.fonts.ready
   requestAnimationFrame(() => { visible.value = true })
   await nextTick()
   setupObserver()
