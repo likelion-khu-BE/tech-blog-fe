@@ -67,8 +67,8 @@ onMounted(async () => {
 
   function animate() {
     // 매 프레임 크기 체크 — CSS 크기와 renderer 동기화
-    const w = canvas.clientWidth
-    const h = canvas.clientHeight
+    const w = canvas!.clientWidth
+    const h = canvas!.clientHeight
     if (w !== lastW || h !== lastH) {
       lastW = w
       lastH = h
