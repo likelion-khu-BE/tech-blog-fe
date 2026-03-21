@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" fill="none">
+  <rect width="800" height="400" fill="#111113"/>
+  <!-- Filter chain 시각화 -->
+  <rect x="60" y="80" width="140" height="50" rx="8" stroke="#8B5CF6" stroke-width="1.5" fill="#1A1A1F"/>
+  <text x="130" y="110" text-anchor="middle" fill="#A78BFA" font-family="monospace" font-size="11">HttpRequest</text>
+
+  <line x1="200" y1="105" x2="260" y2="105" stroke="#55555C" stroke-width="1"/>
+  <polygon points="255,100 265,105 255,110" fill="#55555C"/>
+
+  <rect x="260" y="60" width="160" height="90" rx="8" stroke="#2A2A30" stroke-width="1" fill="#1A1A1F"/>
+  <text x="340" y="85" text-anchor="middle" fill="#EDEDEF" font-family="monospace" font-size="10">SecurityFilterChain</text>
+  <rect x="275" y="95" width="130" height="22" rx="4" fill="#2D1F5E"/>
+  <text x="340" y="110" text-anchor="middle" fill="#A78BFA" font-family="monospace" font-size="9">AuthenticationFilter</text>
+  <rect x="275" y="122" width="130" height="22" rx="4" fill="#2D1F5E"/>
+  <text x="340" y="137" text-anchor="middle" fill="#A78BFA" font-family="monospace" font-size="9">AuthorizationFilter</text>
+
+  <line x1="420" y1="105" x2="480" y2="105" stroke="#55555C" stroke-width="1"/>
+  <polygon points="475,100 485,105 475,110" fill="#55555C"/>
+
+  <rect x="480" y="80" width="140" height="50" rx="8" stroke="#8B5CF6" stroke-width="1.5" fill="#1A1A1F"/>
+  <text x="550" y="110" text-anchor="middle" fill="#A78BFA" font-family="monospace" font-size="11">Controller</text>
+
+  <!-- 하단 JWT -->
+  <rect x="200" y="220" width="400" height="120" rx="10" stroke="#2A2A30" stroke-width="1" fill="#1A1A1F"/>
+  <text x="400" y="248" text-anchor="middle" fill="#55555C" font-family="monospace" font-size="10">JWT Token Structure</text>
+  <rect x="220" y="260" width="110" height="30" rx="4" fill="#2D1F5E"/>
+  <text x="275" y="280" text-anchor="middle" fill="#A78BFA" font-family="monospace" font-size="10">Header</text>
+  <rect x="340" y="260" width="110" height="30" rx="4" fill="#1E3A5F"/>
+  <text x="395" y="280" text-anchor="middle" fill="#60A5FA" font-family="monospace" font-size="10">Payload</text>
+  <rect x="460" y="260" width="120" height="30" rx="4" fill="#1A3F2E"/>
+  <text x="520" y="280" text-anchor="middle" fill="#6EE7B7" font-family="monospace" font-size="10">Signature</text>
+
+  <line x1="340" y1="150" x2="340" y2="220" stroke="#55555C" stroke-width="1" stroke-dasharray="4"/>
+</svg>

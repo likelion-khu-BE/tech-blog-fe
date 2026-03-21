@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" fill="none">
+  <rect width="800" height="400" fill="#111113"/>
+  <text x="400" y="40" text-anchor="middle" fill="#55555C" font-family="monospace" font-size="11">Transaction Isolation Levels</text>
+
+  <!-- Table header -->
+  <rect x="60" y="65" width="680" height="35" rx="0" fill="#1A1A1F"/>
+  <text x="180" y="87" text-anchor="middle" fill="#55555C" font-family="monospace" font-size="10">Isolation Level</text>
+  <text x="370" y="87" text-anchor="middle" fill="#55555C" font-family="monospace" font-size="10">Dirty Read</text>
+  <text x="500" y="87" text-anchor="middle" fill="#55555C" font-family="monospace" font-size="10">Non-Repeatable</text>
+  <text x="640" y="87" text-anchor="middle" fill="#55555C" font-family="monospace" font-size="10">Phantom</text>
+
+  <!-- READ UNCOMMITTED -->
+  <rect x="60" y="100" width="680" height="35" rx="0" fill="#111113" stroke="#1F1F24" stroke-width="0.5"/>
+  <text x="180" y="122" text-anchor="middle" fill="#EDEDEF" font-family="monospace" font-size="10">READ UNCOMMITTED</text>
+  <text x="370" y="122" text-anchor="middle" fill="#FCA5A5" font-family="monospace" font-size="10">Possible</text>
+  <text x="500" y="122" text-anchor="middle" fill="#FCA5A5" font-family="monospace" font-size="10">Possible</text>
+  <text x="640" y="122" text-anchor="middle" fill="#FCA5A5" font-family="monospace" font-size="10">Possible</text>
+
+  <!-- READ COMMITTED -->
+  <rect x="60" y="135" width="680" height="35" rx="0" fill="#1A1A1F" stroke="#1F1F24" stroke-width="0.5"/>
+  <text x="180" y="157" text-anchor="middle" fill="#EDEDEF" font-family="monospace" font-size="10">READ COMMITTED</text>
+  <text x="370" y="157" text-anchor="middle" fill="#86EFAC" font-family="monospace" font-size="10">Prevented</text>
+  <text x="500" y="157" text-anchor="middle" fill="#FCA5A5" font-family="monospace" font-size="10">Possible</text>
+  <text x="640" y="157" text-anchor="middle" fill="#FCA5A5" font-family="monospace" font-size="10">Possible</text>
+
+  <!-- REPEATABLE READ -->
+  <rect x="60" y="170" width="680" height="35" rx="0" fill="#111113" stroke="#1F1F24" stroke-width="0.5"/>
+  <text x="180" y="192" text-anchor="middle" fill="#EDEDEF" font-family="monospace" font-size="10">REPEATABLE READ</text>
+  <text x="370" y="192" text-anchor="middle" fill="#86EFAC" font-family="monospace" font-size="10">Prevented</text>
+  <text x="500" y="192" text-anchor="middle" fill="#86EFAC" font-family="monospace" font-size="10">Prevented</text>
+  <text x="640" y="192" text-anchor="middle" fill="#FCA5A5" font-family="monospace" font-size="10">Possible</text>
+
+  <!-- SERIALIZABLE -->
+  <rect x="60" y="205" width="680" height="35" rx="0" fill="#1A1A1F" stroke="#1F1F24" stroke-width="0.5"/>
+  <text x="180" y="227" text-anchor="middle" fill="#EDEDEF" font-family="monospace" font-size="10">SERIALIZABLE</text>
+  <text x="370" y="227" text-anchor="middle" fill="#86EFAC" font-family="monospace" font-size="10">Prevented</text>
+  <text x="500" y="227" text-anchor="middle" fill="#86EFAC" font-family="monospace" font-size="10">Prevented</text>
+  <text x="640" y="227" text-anchor="middle" fill="#86EFAC" font-family="monospace" font-size="10">Prevented</text>
+
+  <!-- Timeline diagram below -->
+  <text x="400" y="280" text-anchor="middle" fill="#55555C" font-family="monospace" font-size="10">Dirty Read Example</text>
+
+  <line x1="100" y1="310" x2="700" y2="310" stroke="#2A2A30" stroke-width="1"/>
+  <line x1="100" y1="345" x2="700" y2="345" stroke="#2A2A30" stroke-width="1"/>
+
+  <text x="80" y="314" text-anchor="end" fill="#A78BFA" font-family="monospace" font-size="9">T1</text>
+  <text x="80" y="349" text-anchor="end" fill="#60A5FA" font-family="monospace" font-size="9">T2</text>
+
+  <rect x="120" y="298" width="120" height="18" rx="3" fill="#2D1F5E"/>
+  <text x="180" y="311" text-anchor="middle" fill="#A78BFA" font-family="monospace" font-size="8">UPDATE SET x=1</text>
+
+  <rect x="300" y="333" width="100" height="18" rx="3" fill="#1E3A5F"/>
+  <text x="350" y="346" text-anchor="middle" fill="#60A5FA" font-family="monospace" font-size="8">SELECT x → 1</text>
+
+  <rect x="460" y="298" width="90" height="18" rx="3" fill="#3D1F1F"/>
+  <text x="505" y="311" text-anchor="middle" fill="#FCA5A5" font-family="monospace" font-size="8">ROLLBACK</text>
+
+  <text x="600" y="346" text-anchor="middle" fill="#FCA5A5" font-family="monospace" font-size="8">x was never 1!</text>
+</svg>
