@@ -6,9 +6,10 @@
 
 ## Tech Stack
 
-- Vue 3 + TypeScript
+- React 19 + TypeScript
 - Tailwind CSS 4
 - Three.js
+- React Router 7
 - Vite
 
 ## Getting Started
