@@ -29,6 +29,10 @@ Thumbs.db
 # Local
 *.local
 
+# Environment
+.env
+.env.*.local
+
 # Claude
 CLAUDE.md
 .claude
