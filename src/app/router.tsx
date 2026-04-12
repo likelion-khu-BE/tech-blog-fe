@@ -8,6 +8,8 @@ const GenerationsPage = lazy(() => import('../pages/GenerationsPage'))
 const MemberPage = lazy(() => import('../pages/MemberPage'))
 const LegacyMemberPage = lazy(() => import('../pages/LegacyMemberPage'))
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'))
+const LoginPage = lazy(() => import('../pages/LoginPage'))
+const SignupPage = lazy(() => import('../pages/SignupPage'))
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={null}>{children}</Suspense>
@@ -23,6 +25,8 @@ export const router = createBrowserRouter([
       { path: 'members', element: <SuspenseWrapper><GenerationsPage /></SuspenseWrapper> },
       { path: 'members/:id', element: <SuspenseWrapper><MemberPage /></SuspenseWrapper> },
       { path: 'legacy/:id', element: <SuspenseWrapper><LegacyMemberPage /></SuspenseWrapper> },
+      { path: 'login', element: <SuspenseWrapper><LoginPage /></SuspenseWrapper> },
+      { path: 'signup', element: <SuspenseWrapper><SignupPage /></SuspenseWrapper> },
       { path: '*', element: <SuspenseWrapper><NotFoundPage /></SuspenseWrapper> },
     ],
   },
