@@ -1,12 +1,17 @@
 import { useState, useRef } from 'react'
-import { sessions, notes, resources, retros } from '../../data/session-mock'
+import { sessions as initialSessions, notes, resources, retros } from '../../data/session-mock'
 import type { SessionItem, ResourceKind } from '../../types/session'
 
-type SubView = 'list' | 'detail' | 'create'
+type SubView = 'list' | 'detail' | 'create' | 'edit'
 type Tab = 'notes' | 'resources' | 'retro'
 
 const ACCEPTED_FILES = 'image/*,.ppt,.pptx,.pdf,.zip,.java,.py,.ts,.tsx,.js,.doc,.docx'
 const WEEKS = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10', 'W11', 'W12', 'W13', 'W14', 'W15']
+
+function weekLabel(week: string) {
+  const num = week.match(/W(\d+)/)?.[1]
+  return num ? `Week ${num}` : week
+}
 
 function fileIcon(name: string) {
   const ext = name.split('.').pop()?.toLowerCase() ?? ''
@@ -67,7 +72,7 @@ function groupByWeek(items: SessionItem[]) {
 }
 
 // ─── 세션 목록 ───────────────────────────────────────────────
-function SessionList({ onSelect, onCreate }: { onSelect: (s: SessionItem) => void; onCreate: () => void }) {
+function SessionList({ sessions, onSelect, onCreate }: { sessions: SessionItem[]; onSelect: (s: SessionItem) => void; onCreate: () => void }) {
   const grouped = groupByWeek(sessions)
 
   return (
@@ -86,7 +91,7 @@ function SessionList({ onSelect, onCreate }: { onSelect: (s: SessionItem) => voi
         {Array.from(grouped.entries()).map(([week, items]) => (
           <div key={week}>
             <div className="flex items-center gap-3 mb-3">
-              <span className="text-xs font-mono font-semibold text-accent-secondary px-2 py-0.5 rounded bg-accent-muted">{week}</span>
+              <span className="text-xs font-mono font-semibold text-accent-secondary px-2 py-0.5 rounded bg-accent-muted">{weekLabel(week)}</span>
               <div className="flex-1 h-px bg-border-default" />
               <span className="text-[11px] text-text-tertiary">{items.length}개 세션</span>
             </div>
@@ -124,9 +129,20 @@ function SessionList({ onSelect, onCreate }: { onSelect: (s: SessionItem) => voi
 }
 
 // ─── 세션 상세 ───────────────────────────────────────────────
-function SessionDetail({ session, onBack }: { session: SessionItem; onBack: () => void }) {
+function SessionDetail({
+  session,
+  onBack,
+  onEdit,
+  onDelete,
+}: {
+  session: SessionItem
+  onBack: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
   const [tab, setTab] = useState<Tab>('notes')
   const [search, setSearch] = useState('')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const filteredNotes = notes.filter(n =>
     search === '' ||
@@ -142,19 +158,73 @@ function SessionDetail({ session, onBack }: { session: SessionItem; onBack: () =
 
   return (
     <div>
+      {/* 삭제 확인 모달 */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
+          <div className="relative bg-bg-secondary border border-border-default rounded-xl shadow-xl p-6 w-80 mx-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-full bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 4h12M5 4V2.5A1.5 1.5 0 0 1 6.5 1h3A1.5 1.5 0 0 1 11 2.5V4M6 7v5M10 7v5M3 4l1 9.5A1 1 0 0 0 5 14.5h6a1 1 0 0 0 1-1L13 4" stroke="#F87171" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-text-primary">세션 삭제</p>
+                <p className="text-xs text-text-tertiary mt-0.5">이 작업은 되돌릴 수 없습니다</p>
+              </div>
+            </div>
+            <p className="text-sm text-text-secondary leading-relaxed mb-5">
+              <span className="text-text-primary font-medium">"{session.title}"</span> 세션을 삭제하시겠습니까?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 text-sm py-2 rounded-lg border border-border-default text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => { setShowDeleteModal(false); onDelete() }}
+                className="flex-1 text-sm py-2 rounded-lg bg-red-500/90 hover:bg-red-500 text-white transition-colors"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 헤더 */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-text-tertiary hover:text-text-primary transition-colors mb-4"
-      >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        세션 목록으로
-      </button>
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-sm text-text-tertiary hover:text-text-primary transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          세션 목록으로
+        </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onEdit}
+            className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors"
+          >
+            수정
+          </button>
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:text-red-400 hover:border-red-400/50 transition-colors"
+          >
+            삭제
+          </button>
+        </div>
+      </div>
 
       <div className="mb-1">
-        <span className="text-[11px] font-mono bg-bg-tertiary text-text-tertiary px-2 py-0.5 rounded">{session.week}</span>
+        <span className="text-[11px] font-mono bg-bg-tertiary text-text-tertiary px-2 py-0.5 rounded">{weekLabel(session.week)}</span>
       </div>
       <h2 className="text-lg font-semibold text-text-primary leading-snug mb-2">{session.title}</h2>
       <p className="text-sm text-text-secondary leading-relaxed mb-4">{session.content}</p>
@@ -267,9 +337,22 @@ function SessionDetail({ session, onBack }: { session: SessionItem; onBack: () =
   )
 }
 
-// ─── 세션 추가 폼 ─────────────────────────────────────────────
-function SessionCreateForm({ onBack }: { onBack: () => void }) {
-  const [week, setWeek] = useState('W1')
+// ─── 세션 폼 (추가 / 수정 공통) ──────────────────────────────
+function SessionForm({
+  initial,
+  title,
+  onBack,
+  onSave,
+}: {
+  initial?: Partial<SessionItem>
+  title: string
+  onBack: () => void
+  onSave: (data: { week: string; speaker: string; title: string; content: string }) => void
+}) {
+  const [week, setWeek] = useState(initial?.week ? weekOf(initial.week) : 'W1')
+  const [speaker, setSpeaker] = useState(initial?.speaker ?? '')
+  const [sessionTitle, setSessionTitle] = useState(initial?.title ?? '')
+  const [content, setContent] = useState(initial?.content ?? '')
   const [attachments, setAttachments] = useState<File[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -295,7 +378,7 @@ function SessionCreateForm({ onBack }: { onBack: () => void }) {
         취소
       </button>
 
-      <h2 className="text-base font-semibold text-text-primary mb-6">세션 추가</h2>
+      <h2 className="text-base font-semibold text-text-primary mb-6">{title}</h2>
 
       <div className="space-y-5">
         {/* 주차 */}
@@ -316,6 +399,8 @@ function SessionCreateForm({ onBack }: { onBack: () => void }) {
           <input
             type="text"
             placeholder="발표자 이름"
+            value={speaker}
+            onChange={e => setSpeaker(e.target.value)}
             className="w-full bg-bg-tertiary border border-border-default rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-border-hover transition-colors"
           />
         </div>
@@ -326,6 +411,8 @@ function SessionCreateForm({ onBack }: { onBack: () => void }) {
           <input
             type="text"
             placeholder="세션 주제를 입력하세요"
+            value={sessionTitle}
+            onChange={e => setSessionTitle(e.target.value)}
             className="w-full bg-bg-tertiary border border-border-default rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-border-hover transition-colors"
           />
         </div>
@@ -336,6 +423,8 @@ function SessionCreateForm({ onBack }: { onBack: () => void }) {
           <textarea
             rows={5}
             placeholder="세션에서 다룰 내용이나 아젠다를 입력하세요"
+            value={content}
+            onChange={e => setContent(e.target.value)}
             className="w-full bg-bg-tertiary border border-border-default rounded-lg px-4 py-3 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-border-hover transition-colors resize-none leading-relaxed"
           />
         </div>
@@ -387,7 +476,10 @@ function SessionCreateForm({ onBack }: { onBack: () => void }) {
           <button onClick={onBack} className="text-xs px-4 py-2 rounded-md border border-border-default text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors">
             취소
           </button>
-          <button onClick={onBack} className="text-xs px-4 py-2 rounded-md bg-accent-primary text-white hover:bg-accent-primary/80 transition-colors">
+          <button
+            onClick={() => onSave({ week, speaker, title: sessionTitle, content })}
+            className="text-xs px-4 py-2 rounded-md bg-accent-primary text-white hover:bg-accent-primary/80 transition-colors"
+          >
             세션 저장
           </button>
         </div>
@@ -398,17 +490,67 @@ function SessionCreateForm({ onBack }: { onBack: () => void }) {
 
 // ─── 메인 ────────────────────────────────────────────────────
 export function SessionsView() {
+  const [sessionList, setSessionList] = useState<SessionItem[]>(initialSessions)
   const [subView, setSubView] = useState<SubView>('list')
   const [selected, setSelected] = useState<SessionItem | null>(null)
 
+  function handleDelete(id: number) {
+    setSessionList(prev => prev.filter(s => s.id !== id))
+    setSubView('list')
+  }
+
+  function handleEditSave(id: number, data: { week: string; speaker: string; title: string; content: string }) {
+    setSessionList(prev => prev.map(s => {
+      if (s.id !== id) return s
+      const suffix = s.week.includes('-') ? `-${s.week.split('-')[1]}` : ''
+      return { ...s, week: `${data.week}${suffix}`, speaker: data.speaker, title: data.title, content: data.content }
+    }))
+    setSelected(prev => {
+      if (!prev) return prev
+      const suffix = prev.week.includes('-') ? `-${prev.week.split('-')[1]}` : ''
+      return { ...prev, week: `${data.week}${suffix}`, speaker: data.speaker, title: data.title, content: data.content }
+    })
+    setSubView('detail')
+  }
+
+  function handleCreate(data: { week: string; speaker: string; title: string; content: string }) {
+    const newId = Math.max(0, ...sessionList.map(s => s.id)) + 1
+    setSessionList(prev => [...prev, { id: newId, week: data.week, title: data.title, content: data.content, speaker: data.speaker, rating: 0, noteCount: 0, resourceCount: 0 }])
+    setSubView('list')
+  }
+
   if (subView === 'detail' && selected) {
-    return <SessionDetail session={selected} onBack={() => setSubView('list')} />
+    return (
+      <SessionDetail
+        session={selected}
+        onBack={() => setSubView('list')}
+        onEdit={() => setSubView('edit')}
+        onDelete={() => handleDelete(selected.id)}
+      />
+    )
+  }
+  if (subView === 'edit' && selected) {
+    return (
+      <SessionForm
+        initial={selected}
+        title="세션 수정"
+        onBack={() => setSubView('detail')}
+        onSave={data => handleEditSave(selected.id, data)}
+      />
+    )
   }
   if (subView === 'create') {
-    return <SessionCreateForm onBack={() => setSubView('list')} />
+    return (
+      <SessionForm
+        title="세션 추가"
+        onBack={() => setSubView('list')}
+        onSave={handleCreate}
+      />
+    )
   }
   return (
     <SessionList
+      sessions={sessionList}
       onSelect={s => { setSelected(s); setSubView('detail') }}
       onCreate={() => setSubView('create')}
     />
