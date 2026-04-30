@@ -10,6 +10,7 @@ const LegacyMemberPage = lazy(() => import('../pages/LegacyMemberPage'))
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'))
 const LoginPage = lazy(() => import('../pages/LoginPage'))
 const SignupPage = lazy(() => import('../pages/SignupPage'))
+const SessionBoardPage = lazy(() => import('../pages/SessionBoardPage'))
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={null}>{children}</Suspense>
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
       { path: 'members', element: <SuspenseWrapper><GenerationsPage /></SuspenseWrapper> },
       { path: 'members/:id', element: <SuspenseWrapper><MemberPage /></SuspenseWrapper> },
       { path: 'legacy/:id', element: <SuspenseWrapper><LegacyMemberPage /></SuspenseWrapper> },
+      { path: 'sessions', element: <SuspenseWrapper><SessionBoardPage /></SuspenseWrapper> },
       { path: 'login', element: <SuspenseWrapper><LoginPage /></SuspenseWrapper> },
       { path: 'signup', element: <SuspenseWrapper><SignupPage /></SuspenseWrapper> },
       { path: '*', element: <SuspenseWrapper><NotFoundPage /></SuspenseWrapper> },
