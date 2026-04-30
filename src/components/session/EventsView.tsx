@@ -4,6 +4,25 @@ import type { Post, EventType, ViewMode } from '../../types/session'
 
 type SubView = 'list' | 'post' | 'write' | 'edit'
 
+interface LocalReply {
+  id: number
+  author: string
+  initial: string
+  color: string
+  date: string
+  text: string
+}
+
+interface LocalComment {
+  id: number
+  author: string
+  initial: string
+  color: string
+  date: string
+  text: string
+  replies: LocalReply[]
+}
+
 function stripHtml(html: string) {
   return html.replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim()
 }
@@ -163,11 +182,197 @@ function PostCard({ post, viewMode, onClick }: { post: Post; viewMode: ViewMode;
   )
 }
 
+// ─── 댓글 아이템 ──────────────────────────────────────────────
+function CommentItem({
+  comment,
+  onEdit,
+  onDelete,
+  onAddReply,
+  isReply = false,
+}: {
+  comment: LocalComment | LocalReply
+  onEdit: (id: number, text: string) => void
+  onDelete: (id: number) => void
+  onAddReply?: (id: number, text: string) => void
+  isReply?: boolean
+}) {
+  const [editing, setEditing] = useState(false)
+  const [editText, setEditText] = useState(comment.text)
+  const [replying, setReplying] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+  function submitEdit() {
+    if (editText.trim()) onEdit(comment.id, editText.trim())
+    setEditing(false)
+  }
+
+  function submitReply() {
+    if (replyText.trim()) onAddReply?.(comment.id, replyText.trim())
+    setReplyText('')
+    setReplying(false)
+  }
+
+  return (
+    <div>
+      {/* 댓글 삭제 모달 */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
+          <div className="relative bg-bg-secondary border border-border-default rounded-xl shadow-xl p-6 w-80 mx-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-full bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 4h12M5 4V2.5A1.5 1.5 0 0 1 6.5 1h3A1.5 1.5 0 0 1 11 2.5V4M6 7v5M10 7v5M3 4l1 9.5A1 1 0 0 0 5 14.5h6a1 1 0 0 0 1-1L13 4" stroke="#F87171" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-text-primary">댓글 삭제</p>
+                <p className="text-xs text-text-tertiary mt-0.5">이 작업은 되돌릴 수 없습니다</p>
+              </div>
+            </div>
+            <p className="text-sm text-text-secondary leading-relaxed mb-5 line-clamp-2">
+              <span className="text-text-primary font-medium">"{comment.text}"</span>
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 text-sm py-2 rounded-lg border border-border-default text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => { setShowDeleteModal(false); onDelete(comment.id) }}
+                className="flex-1 text-sm py-2 rounded-lg bg-red-500/90 hover:bg-red-500 text-white transition-colors"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2.5">
+        <div className={`${isReply ? 'w-6 h-6' : 'w-7 h-7'} rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${comment.color || defaultAvatarCls}`}>
+          {comment.initial}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-sm font-medium text-text-primary">{comment.author}</span>
+            <span className="text-xs text-text-tertiary">{comment.date}</span>
+            <div className="ml-auto flex items-center gap-2">
+              {!isReply && (
+                <button
+                  onClick={() => setReplying(r => !r)}
+                  className="text-xs text-text-tertiary hover:text-text-secondary transition-colors"
+                >
+                  답글
+                </button>
+              )}
+              <button
+                onClick={() => setEditing(true)}
+                className="text-xs text-text-tertiary hover:text-text-secondary transition-colors"
+              >
+                수정
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="text-xs text-text-tertiary hover:text-red-400 transition-colors"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+          {editing ? (
+            <div className="flex gap-2 mt-1">
+              <input
+                autoFocus
+                value={editText}
+                onChange={e => setEditText(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') submitEdit(); if (e.key === 'Escape') setEditing(false) }}
+                className="flex-1 bg-bg-tertiary border border-border-hover rounded-lg px-3 py-1.5 text-sm text-text-primary outline-none"
+              />
+              <button onClick={submitEdit} className="text-xs px-2.5 py-1 rounded-md bg-accent-primary text-white hover:bg-accent-primary/80 transition-colors flex-shrink-0">저장</button>
+              <button onClick={() => setEditing(false)} className="text-xs px-2.5 py-1 rounded-md border border-border-default text-text-tertiary hover:text-text-secondary transition-colors flex-shrink-0">취소</button>
+            </div>
+          ) : (
+            <p className="text-sm text-text-secondary leading-relaxed">{comment.text}</p>
+          )}
+        </div>
+      </div>
+
+      {/* 답글 목록 */}
+      {'replies' in comment && comment.replies.length > 0 && (
+        <div className="ml-9 mt-3 space-y-3 pl-3 border-l border-border-default">
+          {comment.replies.map(r => (
+            <CommentItem
+              key={r.id}
+              comment={r}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              isReply
+            />
+          ))}
+        </div>
+      )}
+
+      {/* 답글 입력 */}
+      {replying && (
+        <div className="ml-9 mt-2 flex gap-2">
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${defaultAvatarCls}`}>나</div>
+          <input
+            autoFocus
+            value={replyText}
+            onChange={e => setReplyText(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') submitReply(); if (e.key === 'Escape') setReplying(false) }}
+            placeholder="답글을 입력하세요..."
+            className="flex-1 bg-bg-tertiary border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-border-hover transition-colors"
+          />
+          <button onClick={submitReply} className="text-xs px-2.5 py-1.5 rounded-md bg-accent-primary text-white hover:bg-accent-primary/80 transition-colors flex-shrink-0">등록</button>
+          <button onClick={() => setReplying(false)} className="text-xs px-2.5 py-1.5 rounded-md border border-border-default text-text-tertiary hover:text-text-secondary transition-colors flex-shrink-0">취소</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── 게시글 상세 ──────────────────────────────────────────────
 function PostDetail({ post, onBack, onEdit, onDelete }: { post: Post; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
   const [liked, setLiked] = useState(true)
   const [likeCount, setLikeCount] = useState(post.likes)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [comments, setComments] = useState<LocalComment[]>(() =>
+    post.comments.map((c, i) => ({ ...c, id: i + 1, replies: [] }))
+  )
+  const [newComment, setNewComment] = useState('')
+
+  function addComment() {
+    if (!newComment.trim()) return
+    setComments(prev => [...prev, { id: Date.now(), author: '나', initial: '나', color: defaultAvatarCls, date: '방금', text: newComment.trim(), replies: [] }])
+    setNewComment('')
+  }
+
+  function editComment(id: number, text: string) {
+    setComments(prev => prev.map(c => {
+      if (c.id === id) return { ...c, text }
+      return { ...c, replies: c.replies.map(r => r.id === id ? { ...r, text } : r) }
+    }))
+  }
+
+  function deleteComment(id: number) {
+    setComments(prev => {
+      const top = prev.filter(c => c.id !== id)
+      return top.map(c => ({ ...c, replies: c.replies.filter(r => r.id !== id) }))
+    })
+  }
+
+  function addReply(commentId: number, text: string) {
+    setComments(prev => prev.map(c =>
+      c.id === commentId
+        ? { ...c, replies: [...c.replies, { id: Date.now(), author: '나', initial: '나', color: defaultAvatarCls, date: '방금', text }] }
+        : c
+    ))
+  }
 
   return (
     <div className="max-w-2xl">
@@ -274,28 +479,28 @@ function PostDetail({ post, onBack, onEdit, onDelete }: { post: Post; onBack: ()
       </div>
 
       <div>
-        <div className="text-sm text-text-tertiary mb-4">댓글 {post.commentCount}개</div>
+        <div className="text-sm text-text-tertiary mb-4">댓글 {comments.length}개</div>
         <div className="flex gap-2 mb-5">
           <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${defaultAvatarCls}`}>나</div>
           <input
             type="text"
+            value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') addComment() }}
             placeholder="댓글을 남겨보세요..."
             className="flex-1 bg-bg-tertiary border border-border-default rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-border-hover transition-colors"
           />
-          <button className="text-xs px-3 py-1.5 rounded-md bg-accent-primary text-white hover:bg-accent-primary/80 transition-colors flex-shrink-0">등록</button>
+          <button onClick={addComment} className="text-xs px-3 py-1.5 rounded-md bg-accent-primary text-white hover:bg-accent-primary/80 transition-colors flex-shrink-0">등록</button>
         </div>
-        <div className="space-y-4">
-          {post.comments.map((c, i) => (
-            <div key={i} className="flex gap-2.5">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${c.color || defaultAvatarCls}`}>{c.initial}</div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium text-text-primary">{c.author}</span>
-                  <span className="text-xs text-text-tertiary">{c.date}</span>
-                </div>
-                <p className="text-sm text-text-secondary leading-relaxed">{c.text}</p>
-              </div>
-            </div>
+        <div className="space-y-5">
+          {comments.map(c => (
+            <CommentItem
+              key={c.id}
+              comment={c}
+              onEdit={editComment}
+              onDelete={deleteComment}
+              onAddReply={addReply}
+            />
           ))}
         </div>
       </div>
