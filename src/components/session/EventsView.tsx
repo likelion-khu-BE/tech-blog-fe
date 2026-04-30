@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { posts } from '../../data/session-mock'
+import { posts as initialPosts } from '../../data/session-mock'
 import type { Post, EventType, ViewMode } from '../../types/session'
 
 type SubView = 'list' | 'post' | 'write' | 'edit'
@@ -164,12 +164,50 @@ function PostCard({ post, viewMode, onClick }: { post: Post; viewMode: ViewMode;
 }
 
 // ─── 게시글 상세 ──────────────────────────────────────────────
-function PostDetail({ post, onBack, onEdit }: { post: Post; onBack: () => void; onEdit: () => void }) {
+function PostDetail({ post, onBack, onEdit, onDelete }: { post: Post; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
   const [liked, setLiked] = useState(true)
   const [likeCount, setLikeCount] = useState(post.likes)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   return (
     <div className="max-w-2xl">
+      {/* 삭제 확인 모달 */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
+          <div className="relative bg-bg-secondary border border-border-default rounded-xl shadow-xl p-6 w-80 mx-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-full bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 4h12M5 4V2.5A1.5 1.5 0 0 1 6.5 1h3A1.5 1.5 0 0 1 11 2.5V4M6 7v5M10 7v5M3 4l1 9.5A1 1 0 0 0 5 14.5h6a1 1 0 0 0 1-1L13 4" stroke="#F87171" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-text-primary">활동 기록 삭제</p>
+                <p className="text-xs text-text-tertiary mt-0.5">이 작업은 되돌릴 수 없습니다</p>
+              </div>
+            </div>
+            <p className="text-sm text-text-secondary leading-relaxed mb-5">
+              <span className="text-text-primary font-medium">"{post.title}"</span> 기록을 삭제하시겠습니까?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 text-sm py-2 rounded-lg border border-border-default text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => { setShowDeleteModal(false); onDelete() }}
+                className="flex-1 text-sm py-2 rounded-lg bg-red-500/90 hover:bg-red-500 text-white transition-colors"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <button
         onClick={onBack}
         className="flex items-center gap-1.5 text-sm text-text-tertiary hover:text-text-primary transition-colors mb-6"
@@ -192,12 +230,20 @@ function PostDetail({ post, onBack, onEdit }: { post: Post; onBack: () => void; 
           <div className="text-sm font-medium text-text-primary">{post.author}</div>
           <div className="text-xs text-text-tertiary">{post.date}</div>
         </div>
-        <button
-          onClick={onEdit}
-          className="ml-auto text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors"
-        >
-          수정
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={onEdit}
+            className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors"
+          >
+            수정
+          </button>
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:text-red-400 hover:border-red-400/50 transition-colors"
+          >
+            삭제
+          </button>
+        </div>
       </div>
 
       <div
@@ -440,16 +486,22 @@ function WriteView({ onBack, initialPost }: { onBack: () => void; initialPost?: 
 
 // ─── 메인 ────────────────────────────────────────────────────
 export function EventsView() {
+  const [postList, setPostList] = useState<Post[]>(initialPosts)
   const [subView, setSubView] = useState<SubView>('list')
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('blog')
   const [filterType, setFilterType] = useState<EventType | 'all'>('all')
 
-  const filtered = filterType === 'all' ? posts : posts.filter(p => p.type === filterType)
+  const filtered = filterType === 'all' ? postList : postList.filter((p: Post) => p.type === filterType)
 
   function openPost(post: Post) {
     setSelectedPost(post)
     setSubView('post')
+  }
+
+  function handleDelete(id: number) {
+    setPostList(prev => prev.filter(p => p.id !== id))
+    setSubView('list')
   }
 
   if (subView === 'post' && selectedPost) {
@@ -458,6 +510,7 @@ export function EventsView() {
         post={selectedPost}
         onBack={() => setSubView('list')}
         onEdit={() => setSubView('edit')}
+        onDelete={() => handleDelete(selectedPost.id)}
       />
     )
   }
