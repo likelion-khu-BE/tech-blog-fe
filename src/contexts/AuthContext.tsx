@@ -31,11 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading: true, // 초기 silent refresh 완료 전까지 true
   })
 
-  // 마운트 시 silent refresh 시도
+  // 마운트 시 silent refresh 시도 (임시: API 미연결 상태이므로 바로 비인증 상태로)
   useEffect(() => {
-    refreshToken()
-      .then((token) => setState({ isAuthenticated: !!token, isLoading: false }))
-      .catch(() => setState({ isAuthenticated: false, isLoading: false }))
+    setState({ isAuthenticated: false, isLoading: false })
   }, [])
 
   // 인터셉터에서 발생시킨 강제 로그아웃 이벤트 감지
@@ -47,13 +45,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('auth:logout', handleLogout)
   }, [])
 
-  const login = useCallback(async (credentials: LoginRequest) => {
-    await loginApi(credentials)
+  const login = useCallback(async (_credentials: LoginRequest) => {
+    // 임시: API 미연결 상태이므로 바로 로그인 처리
     setState({ isAuthenticated: true, isLoading: false })
   }, [])
 
   const logout = useCallback(async () => {
-    await logoutApi()
+    // 임시: API 미연결 상태이므로 바로 로그아웃 처리
     setState({ isAuthenticated: false, isLoading: false })
   }, [])
 

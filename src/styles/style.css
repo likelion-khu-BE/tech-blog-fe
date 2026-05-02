@@ -110,3 +110,46 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* 아티클 마크다운 렌더링 */
+.article-prose { color: #8B8B93; line-height: 1.8; font-size: 0.9375rem; }
+.article-prose h1, .article-prose h2, .article-prose h3, .article-prose h4 {
+  color: #EDEDEF; font-weight: 700; line-height: 1.3; margin-top: 2.5rem; margin-bottom: 0.75rem;
+}
+.article-prose h1 { font-size: 1.5rem; }
+.article-prose h2 { font-size: 1.25rem; padding-bottom: 0.5rem; border-bottom: 1px solid #1F1F24; }
+.article-prose h3 { font-size: 1.05rem; }
+.article-prose p { margin-top: 0; margin-bottom: 1.25rem; }
+.article-prose a { color: #A78BFA; text-decoration: underline; text-underline-offset: 3px; }
+.article-prose a:hover { color: #8B5CF6; }
+.article-prose strong { color: #EDEDEF; font-weight: 600; }
+.article-prose em { font-style: italic; }
+.article-prose hr { border: none; border-top: 1px solid #1F1F24; margin: 2rem 0; }
+.article-prose ul, .article-prose ol { padding-left: 1.5rem; margin-bottom: 1.25rem; }
+.article-prose li { margin-bottom: 0.35rem; }
+.article-prose ul li { list-style-type: disc; }
+.article-prose ol li { list-style-type: decimal; }
+.article-prose blockquote {
+  border-left: 3px solid #8B5CF6; padding-left: 1rem; margin: 1.5rem 0;
+  color: #55555C; font-style: italic;
+}
+.article-prose code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8125rem; background: #1A1A1F; color: #A78BFA;
+  padding: 0.15em 0.4em; border-radius: 4px;
+}
+.article-prose pre {
+  background: #111113; border: 1px solid #1F1F24; border-radius: 8px;
+  padding: 1.25rem; margin: 1.5rem 0; overflow-x: auto;
+}
+.article-prose pre code {
+  background: none; color: #EDEDEF; padding: 0; font-size: 0.8125rem; line-height: 1.7;
+}
+.article-prose table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.875rem; }
+.article-prose th {
+  text-align: left; padding: 0.5rem 0.75rem; border-bottom: 2px solid #1F1F24;
+  color: #EDEDEF; font-weight: 600;
+}
+.article-prose td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #1F1F24; }
+.article-prose tr:last-child td { border-bottom: none; }
+.article-prose img { max-width: 100%; border-radius: 8px; margin: 1.5rem 0; }

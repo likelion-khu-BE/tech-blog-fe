@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { Link } from 'react-router-dom'
 import { MemberAvatar } from '../member/MemberAvatar'
 import { findMember } from '../../data/members'
 import { timeAgo } from '../../utils/time'
@@ -26,10 +27,10 @@ export const ArticleListItem = memo(function ArticleListItem({
   const author = findMember(article.authorId)
 
   return (
-    <a
-      href="#"
+    <Link
+      to={`/articles/${article.slug}`}
       className={`block py-5 border-b border-border-default group ${className}`}
-      onClick={(e) => { e.preventDefault(); onClick?.() }}
+      onClick={onClick}
       style={style}
     >
       <div className="flex items-center gap-2">
@@ -63,6 +64,6 @@ export const ArticleListItem = memo(function ArticleListItem({
           </span>
         )}
       </div>
-    </a>
+    </Link>
   )
 })
