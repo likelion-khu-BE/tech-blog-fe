@@ -10,6 +10,7 @@ export interface Article {
   tags: string[]
   readingTime: number
   thumbnail?: string
+  content?: string
 }
 
 export const categories = ['전체', '백엔드', '프론트엔드', 'AI'] as const
@@ -25,6 +26,97 @@ export const articles: Article[] = [
     tags: ['Spring Security', 'JWT'],
     readingTime: 12,
     thumbnail: '/images/spring-security-flow.svg',
+    content: `## 왜 파헤치게 됐나
+
+처음 Spring Security를 쓸 때는 그냥 의존성 추가하고, 설정 파일 복붙하고, "된다"는 걸 확인하고 넘어갔다. 그런데 JWT 토큰 검증 로직을 넣으려다 막혔다. \`OncePerRequestFilter\`를 어디에 끼워야 하는지, \`SecurityContextHolder\`에 언제 저장해야 하는지 감이 안 왔다.
+
+결국 디버거를 들고 FilterChain을 직접 따라가기로 했다.
+
+---
+
+## FilterChain의 실제 흐름
+
+HTTP 요청이 들어오면 Spring Security는 \`DelegatingFilterProxy\`를 통해 요청을 가로챈다. 이 proxy는 실제 처리를 \`FilterChainProxy\`에게 위임한다.
+
+\`\`\`
+HTTP Request
+  → DelegatingFilterProxy
+  → FilterChainProxy
+  → SecurityFilterChain (여러 필터의 체인)
+\`\`\`
+
+\`SecurityFilterChain\`은 등록된 필터들을 순서대로 실행한다. 기본 설정 기준으로 15개 이상의 필터가 등록되는데, 그 중 핵심만 추리면:
+
+| 순서 | 필터 | 역할 |
+|------|------|------|
+| 1 | \`SecurityContextPersistenceFilter\` | SecurityContext 복원/저장 |
+| 6 | \`UsernamePasswordAuthenticationFilter\` | 폼 로그인 처리 |
+| 11 | \`ExceptionTranslationFilter\` | 인증/인가 예외 처리 |
+| 12 | \`FilterSecurityInterceptor\` | 접근 권한 최종 판단 |
+
+---
+
+## JWT 필터를 어디에 넣는가
+
+커스텀 JWT 필터를 만들 때 위치가 중요하다. \`UsernamePasswordAuthenticationFilter\` **이전**에 넣어야 한다.
+
+\`\`\`java
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .addFilterBefore(
+                jwtAuthenticationFilter(),
+                UsernamePasswordAuthenticationFilter.class
+            );
+        return http.build();
+    }
+}
+\`\`\`
+
+이유는 간단하다. JWT 필터가 먼저 토큰을 검증하고 \`SecurityContext\`에 인증 정보를 올려놓으면, 뒤따르는 \`FilterSecurityInterceptor\`가 이미 인증된 사용자로 판단하기 때문이다.
+
+---
+
+## SecurityContext에 인증 정보 저장
+
+JWT 검증이 성공하면 아래처럼 \`SecurityContextHolder\`에 저장한다.
+
+\`\`\`java
+UsernamePasswordAuthenticationToken authentication =
+    new UsernamePasswordAuthenticationToken(
+        userDetails,
+        null,
+        userDetails.getAuthorities()
+    );
+
+SecurityContextHolder.getContext().setAuthentication(authentication);
+\`\`\`
+
+세 번째 인자(authorities)가 null이면 인증은 됐지만 권한이 없는 상태로 처리된다. \`@PreAuthorize\` 같은 어노테이션이 작동하려면 반드시 authorities를 넘겨줘야 한다.
+
+---
+
+## 삽질 포인트
+
+**1. OncePerRequestFilter를 써야 하는 이유**
+
+필터를 여러 번 타는 경우가 있다 (forward, include 등). \`OncePerRequestFilter\`는 요청당 한 번만 실행을 보장한다.
+
+**2. SecurityContextHolder의 ThreadLocal**
+
+기본 전략은 \`ThreadLocalSecurityContextHolderStrategy\`다. 즉, 같은 스레드 내에서만 컨텍스트를 공유한다. 비동기 처리할 때 다른 스레드로 넘기면 컨텍스트가 사라진다.
+
+이 경우 \`@Async\` 메서드에 \`SecurityContextHolder.setStrategyName(MODE_INHERITABLETHREADLOCAL)\`을 설정하거나, \`DelegatingSecurityContextRunnable\`로 감싸야 한다.
+
+---
+
+## 정리
+
+공식 문서가 어렵게 느껴졌던 건 "무엇"만 설명하고 "왜"와 "어떻게 흘러가는지"가 빠져있어서였다. 디버거로 직접 따라가보니 각 컴포넌트의 역할과 위치가 명확하게 보였다. 처음 Spring Security를 배운다면 한 번쯤 breakpoint 찍고 FilterChain을 따라가보는 걸 추천한다.
+`,
   },
   {
     slug: 'jpa-n-plus-one',

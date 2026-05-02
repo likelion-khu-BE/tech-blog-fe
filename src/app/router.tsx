@@ -1,9 +1,12 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import App from './App'
+import { ProtectedRoute } from '../components/auth/ProtectedRoute'
 
 const HomePage = lazy(() => import('../pages/HomePage'))
 const ArticlesPage = lazy(() => import('../pages/ArticlesPage'))
+const ArticleDetailPage = lazy(() => import('../pages/ArticleDetailPage'))
+const ArticleWritePage = lazy(() => import('../pages/ArticleWritePage'))
 const GenerationsPage = lazy(() => import('../pages/GenerationsPage'))
 const MemberPage = lazy(() => import('../pages/MemberPage'))
 const LegacyMemberPage = lazy(() => import('../pages/LegacyMemberPage'))
@@ -23,6 +26,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <SuspenseWrapper><HomePage /></SuspenseWrapper> },
       { path: 'articles', element: <SuspenseWrapper><ArticlesPage /></SuspenseWrapper> },
+      { path: 'articles/write', element: <SuspenseWrapper><ProtectedRoute><ArticleWritePage /></ProtectedRoute></SuspenseWrapper> },
+      { path: 'articles/:slug', element: <SuspenseWrapper><ArticleDetailPage /></SuspenseWrapper> },
       { path: 'members', element: <SuspenseWrapper><GenerationsPage /></SuspenseWrapper> },
       { path: 'members/:id', element: <SuspenseWrapper><MemberPage /></SuspenseWrapper> },
       { path: 'legacy/:id', element: <SuspenseWrapper><LegacyMemberPage /></SuspenseWrapper> },
