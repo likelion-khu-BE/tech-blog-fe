@@ -14,6 +14,7 @@ const NotFoundPage = lazy(() => import('../pages/NotFoundPage'))
 const LoginPage = lazy(() => import('../pages/LoginPage'))
 const SignupPage = lazy(() => import('../pages/SignupPage'))
 const SessionBoardPage = lazy(() => import('../pages/SessionBoardPage'))
+const AdminPage = lazy(() => import('../pages/AdminPage'))
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={null}>{children}</Suspense>
@@ -27,13 +28,15 @@ export const router = createBrowserRouter([
       { index: true, element: <SuspenseWrapper><HomePage /></SuspenseWrapper> },
       { path: 'articles', element: <SuspenseWrapper><ArticlesPage /></SuspenseWrapper> },
       { path: 'articles/write', element: <SuspenseWrapper><ProtectedRoute><ArticleWritePage /></ProtectedRoute></SuspenseWrapper> },
-      { path: 'articles/:slug', element: <SuspenseWrapper><ArticleDetailPage /></SuspenseWrapper> },
+      { path: 'articles/:id/edit', element: <SuspenseWrapper><ProtectedRoute><ArticleWritePage /></ProtectedRoute></SuspenseWrapper> },
+      { path: 'articles/:id', element: <SuspenseWrapper><ArticleDetailPage /></SuspenseWrapper> },
       { path: 'members', element: <SuspenseWrapper><GenerationsPage /></SuspenseWrapper> },
       { path: 'members/:id', element: <SuspenseWrapper><MemberPage /></SuspenseWrapper> },
       { path: 'legacy/:id', element: <SuspenseWrapper><LegacyMemberPage /></SuspenseWrapper> },
       { path: 'sessions', element: <SuspenseWrapper><SessionBoardPage /></SuspenseWrapper> },
       { path: 'login', element: <SuspenseWrapper><LoginPage /></SuspenseWrapper> },
       { path: 'signup', element: <SuspenseWrapper><SignupPage /></SuspenseWrapper> },
+      { path: 'admin', element: <SuspenseWrapper><ProtectedRoute requiredRole="ADMIN"><AdminPage /></ProtectedRoute></SuspenseWrapper> },
       { path: '*', element: <SuspenseWrapper><NotFoundPage /></SuspenseWrapper> },
     ],
   },
