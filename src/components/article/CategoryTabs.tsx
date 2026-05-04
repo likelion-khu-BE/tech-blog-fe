@@ -1,5 +1,4 @@
 import { memo } from 'react'
-import { articles } from '../../data/mock'
 
 interface Props {
   categories: readonly string[]
@@ -22,11 +21,6 @@ export const CategoryTabs = memo(function CategoryTabs({ categories, active, onS
           onClick={() => onSelect(cat)}
         >
           {cat}
-          {cat !== '전체' && (
-            <span className="ml-0.5 text-text-tertiary/50">
-              {articles.filter((a) => a.category === cat).length}
-            </span>
-          )}
         </button>
       ))}
     </nav>
