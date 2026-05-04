@@ -11,7 +11,7 @@ const links = [
 export function AppNavbar() {
   const scrolled = useScrollPosition()
   const { pathname } = useLocation()
-  const { isAuthenticated, logout } = useAuth()
+  const { isAuthenticated, logout, role } = useAuth()
   const isHome = pathname === '/'
 
   const bgClass = scrolled
@@ -42,6 +42,18 @@ export function AppNavbar() {
               {link.label}
             </Link>
           ))}
+          {role === 'ADMIN' && (
+            <Link
+              to="/admin"
+              className={`text-xs md:text-sm px-2 md:px-3 py-1.5 rounded-md transition-colors ${
+                pathname.startsWith('/admin')
+                  ? 'text-text-primary'
+                  : 'text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50'
+              }`}
+            >
+              관리자
+            </Link>
+          )}
           <a
             href="https://github.com/likelion-khu-BE"
             target="_blank"
