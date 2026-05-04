@@ -33,4 +33,6 @@ export interface SignupRequest {
 export interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean // 초기 silent refresh 시도 중 true
+  userId: number | null
+  role: 'ADMIN' | 'MEMBER' | null
 }
