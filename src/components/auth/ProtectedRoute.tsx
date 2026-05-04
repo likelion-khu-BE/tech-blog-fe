@@ -13,14 +13,24 @@ import { useAuth } from '../../contexts/AuthContext'
  * - 미인증이면 /login으로 리다이렉트 (원래 가려던 경로를 state에 보존)
  * - 로그인 성공 후 원래 경로로 돌아갈 수 있다
  */
-export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+export function ProtectedRoute({
+  children,
+  requiredRole,
+}: {
+  children: React.ReactNode
+  requiredRole?: 'ADMIN' | 'MEMBER'
+}) {
+  const { isAuthenticated, isLoading, role } = useAuth()
   const location = useLocation()
 
   if (isLoading) return null
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  if (requiredRole && role !== requiredRole) {
+    return <Navigate to="/" replace />
   }
 
   return <>{children}</>
