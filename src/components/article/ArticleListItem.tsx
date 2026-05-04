@@ -1,64 +1,65 @@
 import { memo } from 'react'
 import { Link } from 'react-router-dom'
-import { MemberAvatar } from '../member/MemberAvatar'
-import { findMember } from '../../data/members'
 import { timeAgo } from '../../utils/time'
-import type { Article } from '../../types'
+import type { PostSummary } from '../../types/post'
 
 interface Props {
-  article: Article
+  post: PostSummary
   showNewBadge?: boolean
   showTags?: boolean
-  showAvatar?: boolean
   onClick?: () => void
   className?: string
   style?: React.CSSProperties
 }
 
 export const ArticleListItem = memo(function ArticleListItem({
-  article,
+  post,
   showNewBadge = false,
   showTags = true,
-  showAvatar = true,
   onClick,
   className = '',
   style,
 }: Props) {
-  const author = findMember(article.authorId)
-
   return (
     <Link
-      to={`/articles/${article.slug}`}
+      to={`/articles/${post.id}`}
       className={`block py-5 border-b border-border-default group ${className}`}
       onClick={onClick}
       style={style}
     >
       <div className="flex items-center gap-2">
         <h3 className="text-sm md:text-base font-medium text-text-primary group-hover:text-accent-primary transition-colors break-keep leading-snug">
-          {article.title}
+          {post.title}
         </h3>
         {showNewBadge && <span className="shrink-0 text-[10px] text-accent-primary/80">NEW</span>}
       </div>
 
-      <p className="mt-1.5 text-sm text-text-secondary leading-relaxed break-keep line-clamp-2">
-        {article.summary}
-      </p>
-
       <div className="mt-2.5 flex items-center gap-2 text-xs text-text-tertiary">
-        {showAvatar && author && (
-          <MemberAvatar name={author.name} avatar={author.avatar} size="sm" className="!w-5 !h-5 !text-[9px]" />
+        <span className="font-mono px-1.5 py-0.5 bg-bg-tertiary rounded text-[10px]">{post.board}</span>
+        <span>&middot;</span>
+        <span>{post.category}</span>
+        {post.authorEmail && (
+          <>
+            <span>&middot;</span>
+            <span>{post.authorEmail.split('@')[0]}</span>
+          </>
         )}
-        <span>{author?.name}</span>
         <span>&middot;</span>
-        <span>{timeAgo(article.date)}</span>
-        <span>&middot;</span>
-        <span className="inline-flex items-center gap-1">
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-          {article.readingTime}분
-        </span>
-        {showTags && (
+        <span>{timeAgo(post.createdAt)}</span>
+        {post.likeCount > 0 && (
+          <>
+            <span>&middot;</span>
+            <span className="inline-flex items-center gap-0.5">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              {post.likeCount}
+            </span>
+          </>
+        )}
+        {showTags && post.tags.length > 0 && (
           <span className="ml-auto hidden sm:flex gap-1.5">
-            {article.tags.map((tag) => (
+            {post.tags.map((tag) => (
               <span key={tag} className="font-mono px-1.5 py-0.5 bg-bg-tertiary rounded text-[10px]">{tag}</span>
             ))}
           </span>

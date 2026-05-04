@@ -1,13 +1,19 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useIntersectionObserver } from '../../hooks/useIntersectionObserver'
-import { articles } from '../../data/mock'
-import { findMember } from '../../data/members'
+import { getPosts } from '../../api/posts'
 import { timeAgo } from '../../utils/time'
-
-const recentArticles = articles.slice(0, 4)
+import type { PostSummary } from '../../types/post'
 
 export function RecentArticlesSection() {
   const { ref, isVisible } = useIntersectionObserver()
+  const [posts, setPosts] = useState<PostSummary[]>([])
+
+  useEffect(() => {
+    getPosts({ page: 0, size: 4 }).then((data) => setPosts(data.content)).catch(() => {})
+  }, [])
+
+  if (posts.length === 0) return null
 
   return (
     <section
@@ -25,35 +31,29 @@ export function RecentArticlesSection() {
         </div>
 
         <div className="border-t border-border-default">
-          {recentArticles.map((article, idx) => (
+          {posts.map((post, idx) => (
             <Link
-              key={article.slug}
-              to="/articles"
+              key={post.id}
+              to={`/articles/${post.id}`}
               className={`block py-5 border-b border-border-default group transition-all duration-500 ease-out ${
                 isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
               }`}
               style={{ transitionDelay: isVisible ? `${idx * 80 + 200}ms` : '0ms' }}
             >
               <h3 className="text-sm md:text-base font-medium text-text-primary group-hover:text-accent-primary transition-colors break-keep leading-snug">
-                {article.title}
+                {post.title}
               </h3>
-              <p className="mt-1.5 text-sm text-text-secondary leading-relaxed break-keep line-clamp-2">
-                {article.summary}
-              </p>
               <div className="mt-2 flex items-center gap-2 text-xs text-text-tertiary">
-                <span>{findMember(article.authorId)?.name}</span>
+                <span className="font-mono px-1.5 py-0.5 bg-bg-tertiary rounded text-[10px]">{post.board}</span>
                 <span>&middot;</span>
-                <time className="tabular-nums">{timeAgo(article.date)}</time>
-                <span>&middot;</span>
-                <span className="inline-flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                  {article.readingTime}분
-                </span>
-                <span className="ml-auto hidden sm:flex gap-1.5 font-mono text-[10px]">
-                  {article.tags.map((tag) => (
-                    <span key={tag}>{tag}</span>
-                  ))}
-                </span>
+                <time className="tabular-nums">{timeAgo(post.createdAt)}</time>
+                {post.tags.length > 0 && (
+                  <span className="ml-auto hidden sm:flex gap-1.5 font-mono text-[10px]">
+                    {post.tags.map((tag) => (
+                      <span key={tag}>{tag}</span>
+                    ))}
+                  </span>
+                )}
               </div>
             </Link>
           ))}

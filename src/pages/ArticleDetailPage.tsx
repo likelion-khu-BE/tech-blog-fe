@@ -1,22 +1,72 @@
-import { useMemo } from 'react'
-import { Link, useParams, Navigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { usePageTransition } from '../hooks/usePageTransition'
-import { MemberAvatar } from '../components/member/MemberAvatar'
-import { findMember } from '../data/members'
-import { articles } from '../data/mock'
+import { useAuth } from '../contexts/AuthContext'
+import { getPost, deletePost } from '../api/posts'
 import { timeAgo } from '../utils/time'
+import type { Post } from '../types/post'
 
 export default function ArticleDetailPage() {
-  const { slug } = useParams<{ slug: string }>()
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const visible = usePageTransition()
+  const { isAuthenticated, userId, role } = useAuth()
 
-  const article = useMemo(() => articles.find((a) => a.slug === slug), [slug])
+  const [post, setPost] = useState<Post | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  if (!article) return <Navigate to="/articles" replace />
+  useEffect(() => {
+    if (!id) return
+    setIsLoading(true)
+    setNotFound(false)
+    getPost(Number(id))
+      .then(setPost)
+      .catch((err) => {
+        if (err?.response?.status === 404) setNotFound(true)
+      })
+      .finally(() => setIsLoading(false))
+  }, [id])
 
-  const author = findMember(article.authorId)
+  if (isLoading) {
+    return (
+      <main className="max-w-[700px] mx-auto px-4 md:px-5 pt-14">
+        <div className="pt-40 flex justify-center">
+          <div className="w-5 h-5 border-2 border-border-default border-t-text-tertiary rounded-full animate-spin" />
+        </div>
+      </main>
+    )
+  }
+
+  if (notFound || !post) {
+    return (
+      <main className="max-w-[700px] mx-auto px-4 md:px-5 pt-14">
+        <div className="pt-40 text-center">
+          <p className="text-sm text-text-tertiary">게시글을 찾을 수 없습니다.</p>
+          <Link to="/articles" className="mt-4 inline-block text-sm text-accent-primary hover:underline">
+            목록으로
+          </Link>
+        </div>
+      </main>
+    )
+  }
+
+  const canEdit = isAuthenticated && (userId === post.authorId || role === 'ADMIN')
+
+  async function handleDelete() {
+    if (!window.confirm('게시글을 삭제하시겠습니까?')) return
+    setIsDeleting(true)
+    try {
+      await deletePost(post!.id)
+      navigate('/articles', { replace: true })
+    } catch {
+      alert('삭제에 실패했습니다.')
+      setIsDeleting(false)
+    }
+  }
 
   return (
     <main className="max-w-[700px] mx-auto px-4 md:px-5 pt-14">
@@ -35,41 +85,61 @@ export default function ArticleDetailPage() {
 
       {/* Header */}
       <header className={`pt-8 pb-8 border-b border-border-default transition-all duration-700 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-        <div className="flex items-center gap-2 mb-4">
-          <span className="font-mono text-[10px] px-2 py-0.5 bg-accent-muted text-accent-secondary rounded">
-            {article.category}
-          </span>
-          <span className="text-xs text-text-tertiary inline-flex items-center gap-1">
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
-            </svg>
-            {article.readingTime}분
-          </span>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] px-2 py-0.5 bg-accent-muted text-accent-secondary rounded">
+              {post.board}
+            </span>
+            <span className="font-mono text-[10px] px-2 py-0.5 bg-bg-tertiary text-text-tertiary rounded">
+              {post.category}
+            </span>
+          </div>
+
+          {canEdit && (
+            <div className="flex items-center gap-2">
+              <Link
+                to={`/articles/${post.id}/edit`}
+                className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
+              >
+                수정
+              </Link>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="text-xs text-text-tertiary hover:text-red-400 transition-colors disabled:opacity-40"
+              >
+                {isDeleting ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          )}
         </div>
 
         <h1 className="text-2xl md:text-3xl font-bold text-text-primary leading-snug break-keep">
-          {article.title}
+          {post.title}
         </h1>
 
-        <p className="mt-3 text-sm text-text-secondary leading-relaxed break-keep">
-          {article.summary}
-        </p>
-
-        <div className="mt-6 flex items-center gap-3">
-          {author && (
+        <div className="mt-6 flex items-center gap-3 text-xs text-text-tertiary">
+          {post.authorEmail && <span>{post.authorEmail.split('@')[0]}</span>}
+          {post.authorEmail && <span>&middot;</span>}
+          <span>{post.generation}</span>
+          <span>&middot;</span>
+          <span>{timeAgo(post.createdAt)}</span>
+          {post.likeCount > 0 && (
             <>
-              <MemberAvatar name={author.name} avatar={author.avatar} size="sm" className="!w-7 !h-7 !text-[11px]" />
-              <div>
-                <p className="text-sm font-medium text-text-primary">{author.name}</p>
-                <p className="text-xs text-text-tertiary">{timeAgo(article.date)}</p>
-              </div>
+              <span>&middot;</span>
+              <span className="inline-flex items-center gap-0.5">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                {post.likeCount}
+              </span>
             </>
           )}
         </div>
 
-        {article.tags.length > 0 && (
+        {post.tags.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-1.5">
-            {article.tags.map((tag) => (
+            {post.tags.map((tag) => (
               <span key={tag} className="font-mono text-[10px] px-2 py-0.5 bg-bg-tertiary rounded text-text-tertiary">
                 {tag}
               </span>
@@ -80,10 +150,10 @@ export default function ArticleDetailPage() {
 
       {/* Content */}
       <div className={`py-10 pb-20 transition-all duration-700 delay-200 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-        {article.content ? (
+        {post.content ? (
           <div className="article-prose">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {article.content}
+              {post.content}
             </ReactMarkdown>
           </div>
         ) : (
