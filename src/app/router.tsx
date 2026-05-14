@@ -15,6 +15,8 @@ const LoginPage = lazy(() => import('../pages/LoginPage'))
 const SignupPage = lazy(() => import('../pages/SignupPage'))
 const SessionBoardPage = lazy(() => import('../pages/SessionBoardPage'))
 const AdminPage = lazy(() => import('../pages/AdminPage'))
+const TeamsPage = lazy(() => import('../pages/TeamsPage'))
+const TeamDetailPage = lazy(() => import('../pages/TeamDetailPage'))
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={null}>{children}</Suspense>
@@ -36,6 +38,8 @@ export const router = createBrowserRouter([
       { path: 'sessions', element: <SuspenseWrapper><SessionBoardPage /></SuspenseWrapper> },
       { path: 'login', element: <SuspenseWrapper><LoginPage /></SuspenseWrapper> },
       { path: 'signup', element: <SuspenseWrapper><SignupPage /></SuspenseWrapper> },
+      { path: 'teams', element: <SuspenseWrapper><TeamsPage /></SuspenseWrapper> },
+      { path: 'teams/:id', element: <SuspenseWrapper><TeamDetailPage /></SuspenseWrapper> },
       { path: 'admin', element: <SuspenseWrapper><ProtectedRoute requiredRole="ADMIN"><AdminPage /></ProtectedRoute></SuspenseWrapper> },
       { path: '*', element: <SuspenseWrapper><NotFoundPage /></SuspenseWrapper> },
     ],
