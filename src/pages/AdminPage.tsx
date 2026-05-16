@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getUsers, approveUser, rejectUser, getPosts, updatePostStatus, deletePost, type UserResponse, type AdminPost } from '../api/admin'
+import { getUsers, approveUser, rejectUser, getPosts, updatePostStatus, deletePost, getStats, type UserResponse, type AdminPost, type AdminStats } from '../api/admin'
 
 // ── 회원 관리 ──
 
@@ -272,6 +272,39 @@ function ArticleManagement() {
   )
 }
 
+// ── 통계 대시보드 ──
+
+const STAT_CARDS: { key: keyof AdminStats; label: string; colorClass: string }[] = [
+  { key: 'totalPosts',     label: '전체 게시글',  colorClass: 'text-accent-secondary' },
+  { key: 'publishedPosts', label: '게시된 글',    colorClass: 'text-green-400' },
+  { key: 'draftPosts',     label: '초안',         colorClass: 'text-yellow-400' },
+  { key: 'totalComments',  label: '총 댓글',      colorClass: 'text-text-primary' },
+]
+
+function StatsSection() {
+  const [stats, setStats] = useState<AdminStats | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getStats()
+      .then(setStats)
+      .finally(() => setLoading(false))
+  }, [])
+
+  return (
+    <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 transition-opacity duration-150 ${loading ? 'opacity-40' : 'opacity-100'}`}>
+      {STAT_CARDS.map(({ key, label, colorClass }) => (
+        <div key={key} className="px-4 py-4 rounded-lg bg-bg-secondary border border-border-default">
+          <p className="text-xs text-text-tertiary mb-2">{label}</p>
+          <p className={`text-2xl font-bold ${colorClass}`}>
+            {stats ? stats[key].toLocaleString() : '—'}
+          </p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── 메인 페이지 ──
 
 const SECTIONS = [
@@ -285,6 +318,8 @@ export default function AdminPage() {
   return (
     <div className="max-w-[900px] mx-auto px-4 md:px-5 pt-24 pb-16">
       <h1 className="text-xl font-bold text-text-primary mb-6">관리자</h1>
+
+      <StatsSection />
 
       <div className="flex gap-3 mb-8">
         {SECTIONS.map(({ key, label }) => (

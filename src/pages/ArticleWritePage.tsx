@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { usePageTransition } from '../hooks/usePageTransition'
@@ -33,7 +33,14 @@ export default function ArticleWritePage() {
   const visible = usePageTransition()
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
+  const [searchParams] = useSearchParams()
   const isEditMode = Boolean(id)
+
+  // 리포스트 원본 ID (작성 모드에서만 유효)
+  const repostFromId = !isEditMode && searchParams.get('repostFrom')
+    ? Number(searchParams.get('repostFrom'))
+    : null
+  const [repostOriginal, setRepostOriginal] = useState<{ id: number; title: string } | null>(null)
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [tab, setTab] = useState<Tab>('write')
@@ -59,6 +66,14 @@ export default function ArticleWritePage() {
       .catch(() => setError('게시글을 불러오지 못했습니다.'))
       .finally(() => setIsLoading(false))
   }, [id, isEditMode])
+
+  // 리포스트 원본 게시글 제목 조회
+  useEffect(() => {
+    if (!repostFromId) return
+    getPost(repostFromId)
+      .then((p) => setRepostOriginal({ id: p.id, title: p.title }))
+      .catch(() => {}) // 원본이 없어도 작성은 가능
+  }, [repostFromId])
 
   const update = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -96,6 +111,7 @@ export default function ArticleWritePage() {
           status: form.status,
           generation: form.generation,
           tags,
+          repostFromId: repostFromId ?? undefined,
         })
         navigate(`/articles/${created.id}`, { replace: true })
       }
@@ -158,6 +174,28 @@ export default function ArticleWritePage() {
       <div className="max-w-[1100px] mx-auto px-4 md:px-5">
         {/* Meta fields */}
         <div className="py-6 border-b border-border-default space-y-4">
+          {/* 리포스트 원본 배너 */}
+          {repostFromId && (
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default">
+              <svg className="w-3.5 h-3.5 shrink-0 text-text-tertiary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="text-xs text-text-tertiary shrink-0">리포스트 원본:</span>
+              {repostOriginal ? (
+                <Link
+                  to={`/articles/${repostOriginal.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-accent-primary hover:underline underline-offset-2 truncate"
+                >
+                  {repostOriginal.title}
+                </Link>
+              ) : (
+                <span className="text-xs text-text-tertiary/60">불러오는 중...</span>
+              )}
+            </div>
+          )}
+
           {/* Title */}
           <input
             type="text"
