@@ -23,10 +23,16 @@ export default function ArticleDetailPage() {
   const [bookmarkCount, setBookmarkCount] = useState(0)
   const [isBookmarking, setIsBookmarking] = useState(false)
 
+  // 리포스트 원본 게시글
+  const [originalTitle, setOriginalTitle] = useState<string | null>(null)
+  const [originalNotFound, setOriginalNotFound] = useState(false)
+
   useEffect(() => {
     if (!id) return
     setIsLoading(true)
     setNotFound(false)
+    setOriginalTitle(null)
+    setOriginalNotFound(false)
     getPost(Number(id))
       .then((data) => {
         setPost(data)
@@ -38,6 +44,14 @@ export default function ArticleDetailPage() {
       })
       .finally(() => setIsLoading(false))
   }, [id])
+
+  // 원본 게시글 조회 (repostFromId 있을 때)
+  useEffect(() => {
+    if (!post?.repostFromId) return
+    getPost(post.repostFromId)
+      .then((orig) => setOriginalTitle(orig.title))
+      .catch(() => setOriginalNotFound(true))
+  }, [post?.repostFromId])
 
   if (isLoading) {
     return (
@@ -92,6 +106,16 @@ export default function ArticleDetailPage() {
     }
   }
 
+  function handleAuthorClick() {
+    if (!post.authorId) return
+    navigate('/articles', {
+      state: {
+        authorId: post.authorId,
+        authorLabel: post.authorEmail ? post.authorEmail.split('@')[0] : `ID ${post.authorId}`,
+      },
+    })
+  }
+
   return (
     <main className="max-w-[700px] mx-auto px-4 md:px-5 pt-14">
       {/* Back */}
@@ -119,23 +143,36 @@ export default function ArticleDetailPage() {
             </span>
           </div>
 
-          {canEdit && (
-            <div className="flex items-center gap-2">
-              <Link
-                to={`/articles/${post.id}/edit`}
-                className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
-              >
-                수정
-              </Link>
+          <div className="flex items-center gap-2">
+            {/* 리포스트 버튼 (인증 유저만) */}
+            {isAuthenticated && (
               <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="text-xs text-text-tertiary hover:text-red-400 transition-colors disabled:opacity-40"
+                onClick={() => navigate(`/articles/write?repostFrom=${post.id}`)}
+                className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
+                title="이 글을 리포스트"
               >
-                {isDeleting ? '삭제 중...' : '삭제'}
+                리포스트
               </button>
-            </div>
-          )}
+            )}
+
+            {canEdit && (
+              <>
+                <Link
+                  to={`/articles/${post.id}/edit`}
+                  className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
+                >
+                  수정
+                </Link>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="text-xs text-text-tertiary hover:text-red-400 transition-colors disabled:opacity-40"
+                >
+                  {isDeleting ? '삭제 중...' : '삭제'}
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         <h1 className="text-2xl md:text-3xl font-bold text-text-primary leading-snug break-keep">
@@ -144,8 +181,17 @@ export default function ArticleDetailPage() {
 
         <div className="mt-6 flex items-center justify-between gap-3 text-xs text-text-tertiary">
           <div className="flex items-center gap-3">
-            {post.authorEmail && <span>{post.authorEmail.split('@')[0]}</span>}
-            {post.authorEmail && <span>&middot;</span>}
+            {post.authorEmail && (
+              <>
+                <button
+                  onClick={handleAuthorClick}
+                  className="hover:text-accent-primary transition-colors hover:underline underline-offset-2"
+                >
+                  {post.authorEmail.split('@')[0]}
+                </button>
+                <span>&middot;</span>
+              </>
+            )}
             <span>{post.generation}</span>
             <span>&middot;</span>
             <span>{timeAgo(post.createdAt)}</span>
@@ -185,6 +231,27 @@ export default function ArticleDetailPage() {
           </div>
         )}
 
+        {/* 리포스트 원본 표시 */}
+        {post.repostFromId && (
+          <div className="mt-4 flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default text-xs text-text-tertiary">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span className="shrink-0">리포스트 원본:</span>
+            {originalNotFound ? (
+              <span className="text-text-tertiary/60">(삭제된 게시글)</span>
+            ) : originalTitle ? (
+              <Link
+                to={`/articles/${post.repostFromId}`}
+                className="text-accent-primary hover:underline underline-offset-2 truncate"
+              >
+                {originalTitle}
+              </Link>
+            ) : (
+              <span className="text-text-tertiary/60">불러오는 중...</span>
+            )}
+          </div>
+        )}
       </header>
 
       {/* Content */}
