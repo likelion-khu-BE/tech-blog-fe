@@ -48,8 +48,20 @@ describe('ArticleDetailPage — 게시글 기본 렌더링', () => {
 
   it('작성자명이 클릭 가능한 버튼으로 렌더링된다 (#6)', async () => {
     renderDetail()
-    const authorBtn = await screen.findByRole('button', { name: 'author' })
+    const authorBtn = await screen.findByRole('button', { name: MOCK_POST.authorName! })
     expect(authorBtn).toBeInTheDocument()
+  })
+
+  it('기수(generation)가 메타 영역에 표시된다', async () => {
+    renderDetail()
+    expect(await screen.findByText(MOCK_POST.generation)).toBeInTheDocument()
+  })
+
+  it('authorName이 null이면 작성자 버튼이 렌더링되지 않는다', async () => {
+    mockGetPost.mockResolvedValue({ ...MOCK_POST, authorName: null })
+    renderDetail()
+    await screen.findByText(MOCK_POST.title)
+    expect(screen.queryByRole('button', { name: /author/ })).not.toBeInTheDocument()
   })
 })
 
