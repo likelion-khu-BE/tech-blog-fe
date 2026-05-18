@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import ArticleDetailPage from '../pages/ArticleDetailPage'
-import { MOCK_POST, MOCK_REPOST, MOCK_ORIGINAL_POST, GUEST_AUTH, MEMBER_AUTH, ADMIN_AUTH } from './fixtures'
+import { MOCK_POST, MOCK_REPLY, MOCK_ORIGINAL_POST, GUEST_AUTH, MEMBER_AUTH, ADMIN_AUTH } from './fixtures'
 
 // ── 모듈 모킹 ─────────────────────────────────────────────────
 
@@ -54,24 +54,24 @@ describe('ArticleDetailPage — 게시글 기본 렌더링', () => {
 })
 
 // ─────────────────────────────────────────────────────────────
-describe('ArticleDetailPage — #5 리포스트 버튼 역할별 표시', () => {
-  it('[비로그인] 리포스트 버튼이 없다', async () => {
+describe('ArticleDetailPage — #5 답글 버튼 역할별 표시', () => {
+  it('[비로그인] 답글 버튼이 없다', async () => {
     mockUseAuth.mockReturnValue(GUEST_AUTH)
     renderDetail()
     await screen.findByText(MOCK_POST.title)
-    expect(screen.queryByRole('button', { name: '리포스트' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '답글' })).not.toBeInTheDocument()
   })
 
-  it('[멤버] 리포스트 버튼이 보인다', async () => {
+  it('[멤버] 답글 버튼이 보인다', async () => {
     mockUseAuth.mockReturnValue(MEMBER_AUTH)
     renderDetail()
-    expect(await screen.findByRole('button', { name: '리포스트' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '답글 작성' })).toBeInTheDocument()
   })
 
-  it('[어드민] 리포스트 버튼이 보인다', async () => {
+  it('[어드민] 답글 버튼이 보인다', async () => {
     mockUseAuth.mockReturnValue(ADMIN_AUTH)
     renderDetail()
-    expect(await screen.findByRole('button', { name: '리포스트' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '답글 작성' })).toBeInTheDocument()
   })
 })
 
@@ -109,29 +109,29 @@ describe('ArticleDetailPage — 수정/삭제 버튼 역할별 표시', () => {
 })
 
 // ─────────────────────────────────────────────────────────────
-describe('ArticleDetailPage — #9 리포스트 원본 게시글 표시', () => {
-  it('repostFromId가 없으면 원본 배너가 없다', async () => {
-    mockGetPost.mockResolvedValue(MOCK_POST) // repostFromId: null
+describe('ArticleDetailPage — #9 답글 원본 게시글 표시', () => {
+  it('replyToId가 없으면 원본 배너가 없다', async () => {
+    mockGetPost.mockResolvedValue(MOCK_POST) // replyToId: null
     renderDetail()
     await screen.findByText(MOCK_POST.title)
-    expect(screen.queryByText('리포스트 원본:')).not.toBeInTheDocument()
+    expect(screen.queryByText('원글:')).not.toBeInTheDocument()
   })
 
-  it('repostFromId가 있으면 원본 배너가 표시되고 원본 제목 링크가 렌더링된다', async () => {
+  it('replyToId가 있으면 원본 배너가 표시되고 원본 제목 링크가 렌더링된다', async () => {
     mockGetPost
-      .mockResolvedValueOnce(MOCK_REPOST)         // 리포스트 글 조회
+      .mockResolvedValueOnce(MOCK_REPLY)         // 답글 글 조회
       .mockResolvedValueOnce(MOCK_ORIGINAL_POST)  // 원본 글 조회
     renderDetail(2)
-    expect(await screen.findByText('리포스트 원본:')).toBeInTheDocument()
+    expect(await screen.findByText('원글:')).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: MOCK_ORIGINAL_POST.title })).toBeInTheDocument()
   })
 
   it('원본 게시글이 삭제됐을 때 "(삭제된 게시글)" 텍스트가 표시된다', async () => {
     mockGetPost
-      .mockResolvedValueOnce(MOCK_REPOST)
+      .mockResolvedValueOnce(MOCK_REPLY)
       .mockRejectedValueOnce({ response: { status: 404 } })
     renderDetail(2)
-    await screen.findByText('리포스트 원본:')
+    await screen.findByText('원글:')
     await waitFor(() =>
       expect(screen.getByText('(삭제된 게시글)')).toBeInTheDocument(),
     )

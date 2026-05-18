@@ -23,7 +23,7 @@ export default function ArticleDetailPage() {
   const [bookmarkCount, setBookmarkCount] = useState(0)
   const [isBookmarking, setIsBookmarking] = useState(false)
 
-  // 리포스트 원본 게시글
+  // 원글 게시글
   const [originalTitle, setOriginalTitle] = useState<string | null>(null)
   const [originalNotFound, setOriginalNotFound] = useState(false)
 
@@ -45,13 +45,13 @@ export default function ArticleDetailPage() {
       .finally(() => setIsLoading(false))
   }, [id])
 
-  // 원본 게시글 조회 (repostFromId 있을 때)
+  // 원본 게시글 조회 (replyToId 있을 때)
   useEffect(() => {
-    if (!post?.repostFromId) return
-    getPost(post.repostFromId)
+    if (!post?.replyToId) return
+    getPost(post.replyToId)
       .then((orig) => setOriginalTitle(orig.title))
       .catch(() => setOriginalNotFound(true))
-  }, [post?.repostFromId])
+  }, [post?.replyToId])
 
   if (isLoading) {
     return (
@@ -144,14 +144,14 @@ export default function ArticleDetailPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* 리포스트 버튼 (인증 유저만) */}
+            {/* 답글 작성 버튼 (인증 유저만) */}
             {isAuthenticated && (
               <button
-                onClick={() => navigate(`/articles/write?repostFrom=${post.id}`)}
+                onClick={() => navigate(`/articles/write?replyTo=${post.id}`)}
                 className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
-                title="이 글을 리포스트"
+                title="이 글을 답글 작성"
               >
-                리포스트
+                답글 작성
               </button>
             )}
 
@@ -231,18 +231,18 @@ export default function ArticleDetailPage() {
           </div>
         )}
 
-        {/* 리포스트 원본 표시 */}
-        {post.repostFromId && (
+        {/* 원글 표시 */}
+        {post.replyToId && (
           <div className="mt-4 flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default text-xs text-text-tertiary">
             <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            <span className="shrink-0">리포스트 원본:</span>
+            <span className="shrink-0">원글:</span>
             {originalNotFound ? (
               <span className="text-text-tertiary/60">(삭제된 게시글)</span>
             ) : originalTitle ? (
               <Link
-                to={`/articles/${post.repostFromId}`}
+                to={`/articles/${post.replyToId}`}
                 className="text-accent-primary hover:underline underline-offset-2 truncate"
               >
                 {originalTitle}

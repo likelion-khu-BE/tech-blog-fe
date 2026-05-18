@@ -6,6 +6,16 @@ export type Board = (typeof BOARDS)[number]
 export const GENERATIONS = ['14기', '15기'] as const
 export type Generation = (typeof GENERATIONS)[number]
 
+export const CATEGORIES = [
+  'Spring Boot', 'JPA', 'Spring Security', 'Redis',
+  'React', 'Vue.js', 'TypeScript', 'Next.js',
+  'Docker', 'Kubernetes', 'CI/CD', 'AWS',
+  'Database', 'Algorithm', 'Network', 'Security',
+  'Python', 'Machine Learning', 'NLP', 'LLM',
+  'Git', 'Linux', 'Testing',
+] as const
+export type Category = (typeof CATEGORIES)[number]
+
 export interface PostSummary {
   id: number
   title: string
@@ -18,11 +28,13 @@ export interface PostSummary {
   tags: string[]
   likeCount: number
   createdAt: string
+  replyToId?: number | null
+  replyToTitle?: string | null
 }
 
 export interface Post extends PostSummary {
   content: string
-  repostFromId: number | null
+  replyToId: number | null
   bookmarkCount: number
   liked: boolean
   bookmarked: boolean
@@ -45,9 +57,8 @@ export interface PostCreateRequest {
   board: string
   category: string
   status: PostStatus
-  generation: string
   tags: string[]
-  repostFromId?: number | null
+  replyToId?: number | null
 }
 
 export interface PostUpdateRequest {
