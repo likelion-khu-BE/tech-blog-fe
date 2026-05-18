@@ -6,6 +6,7 @@ import { usePageTransition } from '../hooks/usePageTransition'
 import { useAuth } from '../contexts/AuthContext'
 import { getPost, deletePost } from '../api/posts'
 import { timeAgo } from '../utils/time'
+import LikeButton from '../components/article/LikeButton'
 import type { Post } from '../types/post'
 
 export default function ArticleDetailPage() {
@@ -124,17 +125,8 @@ export default function ArticleDetailPage() {
           <span>{post.generation}</span>
           <span>&middot;</span>
           <span>{timeAgo(post.createdAt)}</span>
-          {post.likeCount > 0 && (
-            <>
-              <span>&middot;</span>
-              <span className="inline-flex items-center gap-0.5">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-                {post.likeCount}
-              </span>
-            </>
-          )}
+          <span>&middot;</span>
+          <LikeButton postId={post.id} initialLiked={post.liked} initialCount={post.likeCount} />
         </div>
 
         {post.tags.length > 0 && (

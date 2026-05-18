@@ -34,3 +34,8 @@ export async function updatePost(id: number, req: PostUpdateRequest): Promise<Po
 export async function deletePost(id: number): Promise<void> {
   await client.delete(`/api/blog/posts/${id}`)
 }
+
+export async function toggleLikePost(id: number): Promise<{ liked: boolean }> {
+  const { data } = await client.post<{ liked: boolean }>(`/api/blog/posts/${id}/like`)
+  return data
+}
