@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { usePageTransition } from '../hooks/usePageTransition'
 import { useAuth } from '../contexts/AuthContext'
-import { getPost, deletePost } from '../api/posts'
+import { getPost, deletePost, toggleBookmark } from '../api/posts'
 import { timeAgo } from '../utils/time'
 import type { Post } from '../types/post'
 
@@ -18,13 +18,20 @@ export default function ArticleDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [bookmarked, setBookmarked] = useState(false)
+  const [bookmarkCount, setBookmarkCount] = useState(0)
+  const [isBookmarking, setIsBookmarking] = useState(false)
 
   useEffect(() => {
     if (!id) return
     setIsLoading(true)
     setNotFound(false)
     getPost(Number(id))
-      .then(setPost)
+      .then((data) => {
+        setPost(data)
+        setBookmarked(data.bookmarked)
+        setBookmarkCount(data.bookmarkCount)
+      })
       .catch((err) => {
         if (err?.response?.status === 404) setNotFound(true)
       })
@@ -55,6 +62,22 @@ export default function ArticleDetailPage() {
   }
 
   const canEdit = isAuthenticated && (userId === post.authorId || role === 'ADMIN')
+
+  async function handleBookmark() {
+    if (!isAuthenticated) {
+      alert('북마크하려면 로그인이 필요합니다.')
+      return
+    }
+    if (isBookmarking) return
+    setIsBookmarking(true)
+    try {
+      const next = await toggleBookmark(post!.id)
+      setBookmarked(next)
+      setBookmarkCount((prev) => prev + (next ? 1 : -1))
+    } finally {
+      setIsBookmarking(false)
+    }
+  }
 
   async function handleDelete() {
     if (!window.confirm('게시글을 삭제하시겠습니까?')) return
@@ -118,23 +141,37 @@ export default function ArticleDetailPage() {
           {post.title}
         </h1>
 
-        <div className="mt-6 flex items-center gap-3 text-xs text-text-tertiary">
-          {post.authorEmail && <span>{post.authorEmail.split('@')[0]}</span>}
-          {post.authorEmail && <span>&middot;</span>}
-          <span>{post.generation}</span>
-          <span>&middot;</span>
-          <span>{timeAgo(post.createdAt)}</span>
-          {post.likeCount > 0 && (
-            <>
-              <span>&middot;</span>
-              <span className="inline-flex items-center gap-0.5">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-                {post.likeCount}
-              </span>
-            </>
-          )}
+        <div className="mt-6 flex items-center justify-between gap-3 text-xs text-text-tertiary">
+          <div className="flex items-center gap-3">
+            {post.authorEmail && <span>{post.authorEmail.split('@')[0]}</span>}
+            {post.authorEmail && <span>&middot;</span>}
+            <span>{post.generation}</span>
+            <span>&middot;</span>
+            <span>{timeAgo(post.createdAt)}</span>
+            {post.likeCount > 0 && (
+              <>
+                <span>&middot;</span>
+                <span className="inline-flex items-center gap-0.5">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  {post.likeCount}
+                </span>
+              </>
+            )}
+          </div>
+          <button
+            onClick={handleBookmark}
+            disabled={isBookmarking}
+            className={`inline-flex items-center gap-1.5 transition-colors disabled:opacity-40 ${
+              bookmarked ? 'text-accent-primary' : 'text-text-tertiary hover:text-text-secondary'
+            }`}
+          >
+            <svg className="w-4 h-4" fill={bookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+            {bookmarkCount > 0 && <span>{bookmarkCount}</span>}
+          </button>
         </div>
 
         {post.tags.length > 0 && (
@@ -146,6 +183,7 @@ export default function ArticleDetailPage() {
             ))}
           </div>
         )}
+
       </header>
 
       {/* Content */}

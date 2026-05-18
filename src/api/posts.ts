@@ -34,3 +34,8 @@ export async function updatePost(id: number, req: PostUpdateRequest): Promise<Po
 export async function deletePost(id: number): Promise<void> {
   await client.delete(`/api/blog/posts/${id}`)
 }
+
+export async function toggleBookmark(id: number): Promise<boolean> {
+  const { data } = await client.post<{ bookmarked: boolean }>(`/api/blog/posts/${id}/bookmark`)
+  return data.bookmarked
+}
