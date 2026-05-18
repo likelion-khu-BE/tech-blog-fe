@@ -12,7 +12,7 @@ export const MOCK_POST_SUMMARY: PostSummary = {
   generation: '14기',
   status: 'PUBLISHED',
   authorId: 100,
-  authorEmail: 'author@khu.ac.kr',
+  authorName: 'author',
   tags: ['Spring', 'JPA'],
   likeCount: 5,
   createdAt: '2025-01-01T00:00:00',
