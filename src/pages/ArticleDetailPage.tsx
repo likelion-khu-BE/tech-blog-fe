@@ -6,6 +6,7 @@ import { usePageTransition } from '../hooks/usePageTransition'
 import { useAuth } from '../contexts/AuthContext'
 import { getPost, deletePost } from '../api/posts'
 import { timeAgo } from '../utils/time'
+import { CommentSection } from '../components/comment/CommentSection'
 import type { Post } from '../types/post'
 
 export default function ArticleDetailPage() {
@@ -162,6 +163,8 @@ export default function ArticleDetailPage() {
           </div>
         )}
       </div>
+
+      <CommentSection postId={post.id} />
 
       {/* Footer nav */}
       <div className="border-t border-border-default py-8 mb-16">
