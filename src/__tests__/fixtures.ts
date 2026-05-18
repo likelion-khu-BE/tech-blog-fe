@@ -16,23 +16,25 @@ export const MOCK_POST_SUMMARY: PostSummary = {
   tags: ['Spring', 'JPA'],
   likeCount: 5,
   createdAt: '2025-01-01T00:00:00',
+  replyToId: null,
+  replyToTitle: null,
 }
 
 export const MOCK_POST: Post = {
   ...MOCK_POST_SUMMARY,
   content: '# 제목\n\n본문 내용입니다.',
-  repostFromId: null,
+  replyToId: null,
   bookmarkCount: 2,
   liked: false,
   bookmarked: false,
   updatedAt: '2025-01-01T00:00:00',
 }
 
-export const MOCK_REPOST: Post = {
+export const MOCK_REPLY: Post = {
   ...MOCK_POST,
   id: 2,
-  title: '리포스트 게시글',
-  repostFromId: 1,
+  title: '답글 게시글',
+  replyToId: 1,
 }
 
 export const MOCK_ORIGINAL_POST: Post = {

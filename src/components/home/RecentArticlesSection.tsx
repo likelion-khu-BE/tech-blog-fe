@@ -40,18 +40,26 @@ export function RecentArticlesSection() {
               }`}
               style={{ transitionDelay: isVisible ? `${idx * 80 + 200}ms` : '0ms' }}
             >
-              <h3 className="text-sm md:text-base font-medium text-text-primary group-hover:text-accent-primary transition-colors break-keep leading-snug">
-                {post.title}
-              </h3>
-              <div className="mt-2 flex items-center gap-2 text-xs text-text-tertiary">
-                <span className="font-mono px-1.5 py-0.5 bg-bg-tertiary rounded text-[10px]">{post.board}</span>
-                <span>&middot;</span>
-                <time className="tabular-nums">{timeAgo(post.createdAt)}</time>
-                {post.tags.length > 0 && (
-                  <span className="ml-auto hidden sm:flex gap-1.5 font-mono text-[10px]">
-                    {post.tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm md:text-base font-medium text-text-primary group-hover:text-accent-primary transition-colors break-keep leading-snug">
+                    {post.title}
+                  </h3>
+                  <div className="mt-2 flex items-center gap-2 text-xs text-text-tertiary">
+                    <span className="font-mono px-1.5 py-0.5 bg-bg-tertiary rounded text-[10px]">{post.board}</span>
+                    <span>&middot;</span>
+                    <time className="tabular-nums">{timeAgo(post.createdAt)}</time>
+                  </div>
+                </div>
+
+                {post.replyToId && (
+                  <span className="shrink-0 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-bg-tertiary text-text-tertiary border border-border-default max-w-[180px]">
+                    <svg className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span className="truncate">
+                      {post.replyToTitle ? `${post.replyToTitle}에 대한 답글` : '답글'}
+                    </span>
                   </span>
                 )}
               </div>
