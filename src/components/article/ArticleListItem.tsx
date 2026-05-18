@@ -40,10 +40,10 @@ export const ArticleListItem = memo(function ArticleListItem({
             <span className="font-mono px-1.5 py-0.5 bg-bg-tertiary rounded text-[10px]">{post.board}</span>
             <span>&middot;</span>
             <span>{post.category}</span>
-            {post.authorEmail && (
+            {post.authorName && (
               <>
                 <span>&middot;</span>
-                <span>{post.authorEmail.split('@')[0]}</span>
+                <span>{post.authorName}</span>
               </>
             )}
             <span>&middot;</span>

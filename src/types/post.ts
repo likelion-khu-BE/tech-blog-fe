@@ -24,7 +24,7 @@ export interface PostSummary {
   generation: string
   status: PostStatus
   authorId: number
-  authorEmail: string | null
+  authorName: string | null
   tags: string[]
   likeCount: number
   createdAt: string
@@ -35,6 +35,7 @@ export interface PostSummary {
 export interface Post extends PostSummary {
   content: string
   replyToId: number | null
+  authorName: string | null
   bookmarkCount: number
   liked: boolean
   bookmarked: boolean

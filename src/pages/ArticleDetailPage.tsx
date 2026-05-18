@@ -111,7 +111,7 @@ export default function ArticleDetailPage() {
     navigate('/articles', {
       state: {
         authorId: post.authorId,
-        authorLabel: post.authorEmail ? post.authorEmail.split('@')[0] : `ID ${post.authorId}`,
+        authorLabel: post.authorName ?? `ID ${post.authorId}`,
       },
     })
   }
@@ -181,13 +181,13 @@ export default function ArticleDetailPage() {
 
         <div className="mt-6 flex items-center justify-between gap-3 text-xs text-text-tertiary">
           <div className="flex items-center gap-3">
-            {post.authorEmail && (
+            {post.authorName && (
               <>
                 <button
                   onClick={handleAuthorClick}
                   className="hover:text-accent-primary transition-colors hover:underline underline-offset-2"
                 >
-                  {post.authorEmail.split('@')[0]}
+                  {post.authorName}
                 </button>
                 <span>&middot;</span>
               </>
