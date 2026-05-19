@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { usePageTransition } from '../hooks/usePageTransition'
 import { createPost, updatePost, getPost } from '../api/posts'
-import { BOARDS, GENERATIONS, CATEGORIES } from '../types/post'
+import { BOARDS, CATEGORIES } from '../types/post'
 import type { PostStatus } from '../types/post'
 
 type Tab = 'write' | 'preview'
@@ -34,11 +34,14 @@ export default function ArticleWritePage() {
   const [searchParams] = useSearchParams()
   const isEditMode = Boolean(id)
 
-  // 원글 ID (작성 모드에서만 유효)
-  const replyToId = !isEditMode && searchParams.get('replyTo')
-    ? Number(searchParams.get('replyTo'))
+  // 원글 ID (작성 모드에서만 유효) — NaN 방지
+  const rawReplyTo = !isEditMode ? searchParams.get('replyTo') : null
+  const parsedReplyTo = rawReplyTo ? Number(rawReplyTo) : null
+  const replyToId = parsedReplyTo !== null && Number.isInteger(parsedReplyTo) && parsedReplyTo > 0
+    ? parsedReplyTo
     : null
   const [replyOriginal, setRepostOriginal] = useState<{ id: number; title: string } | null>(null)
+  const [replyOriginalNotFound, setReplyOriginalNotFound] = useState(false)
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [tab, setTab] = useState<Tab>('write')
@@ -69,9 +72,12 @@ export default function ArticleWritePage() {
   // 원글 게시글 제목 조회
   useEffect(() => {
     if (!replyToId) return
+    setReplyOriginalNotFound(false)
     getPost(replyToId)
       .then((p) => setRepostOriginal({ id: p.id, title: p.title }))
-      .catch(() => {}) // 원본이 없어도 작성은 가능
+      .catch((err) => {
+        if (err?.response?.status === 404) setReplyOriginalNotFound(true)
+      })
   }, [replyToId])
 
   const update = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -183,6 +189,8 @@ export default function ArticleWritePage() {
                 >
                   {replyOriginal.title}
                 </Link>
+              ) : replyOriginalNotFound ? (
+                <span className="text-xs text-text-tertiary/60">(삭제된 게시글)</span>
               ) : (
                 <span className="text-xs text-text-tertiary/60">불러오는 중...</span>
               )}

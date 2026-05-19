@@ -286,9 +286,12 @@ function StatsSection() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let active = true
     getStats()
-      .then(setStats)
-      .finally(() => setLoading(false))
+      .then((data) => { if (active) setStats(data) })
+      .catch(() => { if (active) setStats(null) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [])
 
   return (

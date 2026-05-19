@@ -50,7 +50,9 @@ export default function ArticleDetailPage() {
     if (!post?.replyToId) return
     getPost(post.replyToId)
       .then((orig) => setOriginalTitle(orig.title))
-      .catch(() => setOriginalNotFound(true))
+      .catch((err) => {
+      if (err?.response?.status === 404) setOriginalNotFound(true)
+    })
   }, [post?.replyToId])
 
   if (isLoading) {
@@ -107,7 +109,7 @@ export default function ArticleDetailPage() {
   }
 
   function handleAuthorClick() {
-    if (!post.authorId) return
+    if (!post?.authorId) return
     navigate('/articles', {
       state: {
         authorId: post.authorId,

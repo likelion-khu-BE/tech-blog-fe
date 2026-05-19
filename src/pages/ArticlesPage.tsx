@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { usePageTransition } from '../hooks/usePageTransition'
 import { useArticleReadStatus } from '../hooks/useArticleReadStatus'
@@ -36,6 +36,7 @@ export default function ArticlesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const requestSeq = useRef(0)
 
   // keyword debounce 300ms
   useEffect(() => {
@@ -48,6 +49,8 @@ export default function ArticlesPage() {
     nextPage: number,
     append: boolean,
   ) => {
+    requestSeq.current += 1
+    const seq = requestSeq.current
     try {
       const data = await getPosts({
         board: params.board === '전체' ? undefined : params.board,
@@ -57,11 +60,13 @@ export default function ArticlesPage() {
         page: nextPage,
         size: PAGE_SIZE,
       })
+      if (seq !== requestSeq.current) return
       setPosts(prev => append ? [...prev, ...data.content] : data.content)
       setTotalElements(data.totalElements)
       setIsLast(data.last)
       setPage(nextPage)
     } catch {
+      if (seq !== requestSeq.current) return
       setError('게시글을 불러오지 못했습니다.')
     }
   }, [])
@@ -120,6 +125,7 @@ export default function ArticlesPage() {
           />
           {keyword && (
             <button
+              aria-label="검색어 지우기"
               onClick={() => setKeyword('')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary transition-colors"
             >
@@ -162,7 +168,7 @@ export default function ArticlesPage() {
           <span className="text-xs text-text-tertiary">작성자 필터:</span>
           <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-accent-muted text-accent-secondary border border-accent-primary/30">
             {authorLabel || `ID ${authorId}`}
-            <button onClick={clearAuthorFilter} className="hover:text-text-primary transition-colors">
+            <button aria-label="작성자 필터 해제" onClick={clearAuthorFilter} className="hover:text-text-primary transition-colors">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
