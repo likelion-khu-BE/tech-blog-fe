@@ -26,6 +26,7 @@ export default function ArticleDetailPage() {
   // 원글 게시글
   const [originalTitle, setOriginalTitle] = useState<string | null>(null)
   const [originalNotFound, setOriginalNotFound] = useState(false)
+  const [originalFetchFailed, setOriginalFetchFailed] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -33,6 +34,7 @@ export default function ArticleDetailPage() {
     setNotFound(false)
     setOriginalTitle(null)
     setOriginalNotFound(false)
+    setOriginalFetchFailed(false)
     getPost(Number(id))
       .then((data) => {
         setPost(data)
@@ -52,6 +54,7 @@ export default function ArticleDetailPage() {
       .then((orig) => setOriginalTitle(orig.title))
       .catch((err) => {
       if (err?.response?.status === 404) setOriginalNotFound(true)
+      else setOriginalFetchFailed(true)
     })
   }, [post?.replyToId])
 
@@ -242,6 +245,8 @@ export default function ArticleDetailPage() {
             <span className="shrink-0">원글:</span>
             {originalNotFound ? (
               <span className="text-text-tertiary/60">(삭제된 게시글)</span>
+            ) : originalFetchFailed ? (
+              <span className="text-text-tertiary/60">원글을 불러올 수 없습니다.</span>
             ) : originalTitle ? (
               <Link
                 to={`/articles/${post.replyToId}`}
