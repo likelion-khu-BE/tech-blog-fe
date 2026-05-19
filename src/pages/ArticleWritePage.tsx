@@ -40,7 +40,7 @@ export default function ArticleWritePage() {
   const replyToId = parsedReplyTo !== null && Number.isInteger(parsedReplyTo) && parsedReplyTo > 0
     ? parsedReplyTo
     : null
-  const [replyOriginal, setRepostOriginal] = useState<{ id: number; title: string } | null>(null)
+  const [replyOriginal, setReplyOriginal] = useState<{ id: number; title: string } | null>(null)
   const [replyOriginalNotFound, setReplyOriginalNotFound] = useState(false)
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
