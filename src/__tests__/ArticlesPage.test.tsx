@@ -93,7 +93,7 @@ describe('ArticlesPage — #7 키워드 검색', () => {
       expect(mockGetPosts).toHaveBeenCalledWith(expect.objectContaining({ keyword: 'Spring' })),
       { timeout: 1000 },
     )
-    const clearBtn = screen.getByRole('button', { name: '' }) // X 버튼 (aria-label 없음)
+    const clearBtn = screen.getByRole('button', { name: '검색어 지우기' })
     await userEvent.click(clearBtn)
     await waitFor(() =>
       expect(mockGetPosts).toHaveBeenLastCalledWith(

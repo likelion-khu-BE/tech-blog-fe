@@ -61,7 +61,7 @@ describe('ArticleDetailPage — 게시글 기본 렌더링', () => {
     mockGetPost.mockResolvedValue({ ...MOCK_POST, authorName: null })
     renderDetail()
     await screen.findByText(MOCK_POST.title)
-    expect(screen.queryByRole('button', { name: /author/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: MOCK_POST.authorName! })).not.toBeInTheDocument()
   })
 })
 
@@ -71,7 +71,7 @@ describe('ArticleDetailPage — #5 답글 버튼 역할별 표시', () => {
     mockUseAuth.mockReturnValue(GUEST_AUTH)
     renderDetail()
     await screen.findByText(MOCK_POST.title)
-    expect(screen.queryByRole('button', { name: '답글' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '답글 작성' })).not.toBeInTheDocument()
   })
 
   it('[멤버] 답글 버튼이 보인다', async () => {
