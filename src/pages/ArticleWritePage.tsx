@@ -42,6 +42,7 @@ export default function ArticleWritePage() {
     : null
   const [replyOriginal, setReplyOriginal] = useState<{ id: number; title: string } | null>(null)
   const [replyOriginalNotFound, setReplyOriginalNotFound] = useState(false)
+  const [replyOriginalFailed, setReplyOriginalFailed] = useState(false)
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [tab, setTab] = useState<Tab>('write')
@@ -72,11 +73,14 @@ export default function ArticleWritePage() {
   // 원글 게시글 제목 조회
   useEffect(() => {
     if (!replyToId) return
+    setReplyOriginal(null)
     setReplyOriginalNotFound(false)
+    setReplyOriginalFailed(false)
     getPost(replyToId)
-      .then((p) => setRepostOriginal({ id: p.id, title: p.title }))
+      .then((p) => setReplyOriginal({ id: p.id, title: p.title }))
       .catch((err) => {
         if (err?.response?.status === 404) setReplyOriginalNotFound(true)
+        else setReplyOriginalFailed(true)
       })
   }, [replyToId])
 
@@ -191,6 +195,8 @@ export default function ArticleWritePage() {
                 </Link>
               ) : replyOriginalNotFound ? (
                 <span className="text-xs text-text-tertiary/60">(삭제된 게시글)</span>
+              ) : replyOriginalFailed ? (
+                <span className="text-xs text-text-tertiary/60">원글을 불러올 수 없습니다.</span>
               ) : (
                 <span className="text-xs text-text-tertiary/60">불러오는 중...</span>
               )}
