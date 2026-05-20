@@ -162,3 +162,63 @@ export interface UpdateRolesResponse {
   memberId: number
   roles: RoleInTeam[]
 }
+
+export type ActivityType =
+  | 'blog_post'
+  | 'blog_comment'
+  | 'blog_post_like'
+  | 'blog_post_like_received'
+  | 'qna_question'
+  | 'qna_answer'
+  | 'qna_accepted'
+  | 'qna_answer_upvote'
+  | 'qna_answer_downvote'
+  | 'qna_comment'
+  | 'session_speak'
+  | 'session_event_post'
+  | 'session_event_comment'
+  | 'session_event_post_like'
+  | 'session_event_post_like_received'
+
+export type RankingPeriod = 'month' | 'year' | 'all'
+
+export interface MemberStats {
+  memberId: number
+  blog: number
+  qna: number
+  session: number
+}
+
+export interface Activity {
+  id: number
+  type: ActivityType
+  score: number
+  createdAt: string
+  link: string
+}
+
+export interface ActivityPage {
+  content: Activity[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+  hasNext: boolean
+}
+
+export interface RankingMember {
+  rank: number
+  memberId: number
+  name: string
+  profileImageUrl: string | null
+  totalScore: number
+}
+
+export interface RankingPage {
+  content: RankingMember[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+  hasNext: boolean
+}

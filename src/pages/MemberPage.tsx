@@ -1,8 +1,26 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { usePageTransition } from '../hooks/usePageTransition'
-import { getMember } from '../api/profile'
-import type { MemberDetail, MemberTechStack, SessionType } from '../types/profile'
+import { getMember, getMemberStats, getMemberActivities } from '../api/profile'
+import type { MemberDetail, MemberTechStack, SessionType, MemberStats, ActivityPage, ActivityType } from '../types/profile'
+
+const ACTIVITY_LABEL: Record<ActivityType, string> = {
+  blog_post: '블로그 글',
+  blog_comment: '블로그 댓글',
+  blog_post_like: '블로그 좋아요',
+  blog_post_like_received: '블로그 좋아요 받음',
+  qna_question: 'Q&A 질문',
+  qna_answer: 'Q&A 답변',
+  qna_accepted: 'Q&A 채택',
+  qna_answer_upvote: 'Q&A 추천',
+  qna_answer_downvote: 'Q&A 비추천',
+  qna_comment: 'Q&A 댓글',
+  session_speak: '세션 발표',
+  session_event_post: '세션 게시글',
+  session_event_comment: '세션 댓글',
+  session_event_post_like: '세션 좋아요',
+  session_event_post_like_received: '세션 좋아요 받음',
+}
 
 const SESSION_LABEL: Record<SessionType, string> = {
   backend: '백엔드',
@@ -37,7 +55,9 @@ function TechStackBadge({ stack }: { stack: MemberTechStack }) {
   return (
     <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-bg-secondary border border-border-default">
       {stack.logoUrl && (
-        <img src={stack.logoUrl} alt={stack.name} className="w-4 h-4 object-contain" />
+        <span className="flex items-center justify-center w-6 h-6 rounded bg-white/15 p-0.5 shrink-0">
+          <img src={stack.logoUrl} alt={stack.name} className="w-full h-full object-contain" />
+        </span>
       )}
       <span className="text-xs text-text-secondary">{stack.name}</span>
       {stack.proficiency != null && (
@@ -61,6 +81,10 @@ export default function MemberPage() {
   const [member, setMember] = useState<MemberDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState<MemberStats | null>(null)
+  const [activities, setActivities] = useState<ActivityPage | null>(null)
+  const [activitiesPage, setActivitiesPage] = useState(0)
+  const [activitiesLoading, setActivitiesLoading] = useState(false)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -69,12 +93,22 @@ export default function MemberPage() {
       setLoading(false)
       return
     }
+    const memberId = Number(id)
     setLoading(true)
-    getMember(Number(id))
-      .then(setMember)
+    Promise.all([getMember(memberId), getMemberStats(memberId)])
+      .then(([m, s]) => { setMember(m); setStats(s) })
       .catch(() => setError('멤버를 찾을 수 없습니다.'))
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (!id || isNaN(Number(id))) return
+    setActivitiesLoading(true)
+    getMemberActivities(Number(id), { page: activitiesPage, size: 10 })
+      .then(setActivities)
+      .catch(() => {})
+      .finally(() => setActivitiesLoading(false))
+  }, [id, activitiesPage])
 
   if (loading) {
     return (
@@ -212,6 +246,76 @@ export default function MemberPage() {
                 </div>
               ))}
             </div>
+          </section>
+        </>
+      )}
+
+      {stats && (
+        <>
+          <div className="max-w-[700px] mx-auto px-4 md:px-5"><div className="h-px bg-border-default" /></div>
+          <section
+            className={`max-w-[700px] mx-auto px-4 md:px-5 py-12 transition-all duration-700 delay-150 ease-out ${
+              visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+            }`}
+          >
+            <h2 className="text-lg font-bold text-text-primary tracking-tight mb-6">활동</h2>
+            <div className="grid grid-cols-3 gap-3 mb-8">
+              {([['blog', '블로그'], ['qna', 'Q&A'], ['session', '세션']] as const).map(([key, label]) => (
+                <div key={key} className="flex flex-col items-center gap-1 p-4 rounded-lg bg-bg-secondary border border-border-default">
+                  <span className="text-2xl font-bold text-text-primary">{stats[key]}</span>
+                  <span className="text-xs text-text-tertiary">{label}</span>
+                </div>
+              ))}
+            </div>
+
+            {activitiesLoading && activities === null ? (
+              <p className="text-xs text-text-tertiary">불러오는 중...</p>
+            ) : activities && activities.content.length > 0 ? (
+              <>
+                <div className="space-y-2">
+                  {activities.content.map((activity) => (
+                    <Link
+                      key={activity.id}
+                      to={activity.link}
+                      className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate">
+                          {ACTIVITY_LABEL[activity.type]}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0 ml-3">
+                        <span className="text-[10px] text-accent-primary/80">+{activity.score}</span>
+                        <span className="text-[10px] text-text-tertiary">
+                          {new Date(activity.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                {(activities.totalPages > 1) && (
+                  <div className="flex items-center justify-between mt-4">
+                    <button
+                      onClick={() => setActivitiesPage((p) => p - 1)}
+                      disabled={activitiesPage === 0 || activitiesLoading}
+                      className="text-xs px-3 py-1.5 rounded border border-border-default text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors"
+                    >
+                      이전
+                    </button>
+                    <span className="text-xs text-text-tertiary">{activitiesPage + 1} / {activities.totalPages}</span>
+                    <button
+                      onClick={() => setActivitiesPage((p) => p + 1)}
+                      disabled={!activities.hasNext || activitiesLoading}
+                      className="text-xs px-3 py-1.5 rounded border border-border-default text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors"
+                    >
+                      다음
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-text-tertiary">아직 활동이 없습니다.</p>
+            )}
           </section>
         </>
       )}

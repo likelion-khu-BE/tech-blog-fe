@@ -674,7 +674,12 @@ export default function TeamDetailPage() {
               <h2 className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-3">기술 스택</h2>
               <div className="flex flex-wrap gap-2">
                 {team.techStacks.map((ts) => (
-                  <span key={ts.id} className="text-xs px-2.5 py-1 rounded-full bg-bg-tertiary text-text-secondary">
+                  <span key={ts.id} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-bg-tertiary text-text-secondary">
+                    {ts.logoUrl && (
+                      <span className="flex items-center justify-center w-5 h-5 rounded bg-white/15 p-0.5 shrink-0">
+                        <img src={ts.logoUrl} alt={ts.name} className="w-full h-full object-contain" />
+                      </span>
+                    )}
                     {ts.name}
                   </span>
                 ))}

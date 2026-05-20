@@ -21,6 +21,10 @@ import type {
   RoleInTeam,
   UpdateRolesResponse,
   SessionType,
+  MemberStats,
+  ActivityPage,
+  RankingPage,
+  RankingPeriod,
 } from '../types/profile'
 
 // ── Members ──
@@ -138,4 +142,30 @@ export function updateMyTechStacks(
   stacks: { techStackId: number; proficiency?: number | null }[],
 ): Promise<MemberTechStack[]> {
   return client.put<MemberTechStack[]>('/api/profile/members/me/tech-stacks', stacks).then((r) => r.data)
+}
+
+// ── Activities ──
+
+export function getMemberStats(memberId: number): Promise<MemberStats> {
+  return client.get<MemberStats>(`/api/profile/members/${memberId}/stats`).then((r) => r.data)
+}
+
+export function getMemberActivities(
+  memberId: number,
+  params?: { page?: number; size?: number },
+): Promise<ActivityPage> {
+  return client.get<ActivityPage>(`/api/profile/members/${memberId}/activities`, { params }).then((r) => r.data)
+}
+
+export function getMyReactions(params?: { page?: number; size?: number }): Promise<ActivityPage> {
+  return client.get<ActivityPage>('/api/profile/members/me/reactions', { params }).then((r) => r.data)
+}
+
+export function getRanking(params?: {
+  period?: RankingPeriod
+  generationId?: number
+  page?: number
+  size?: number
+}): Promise<RankingPage> {
+  return client.get<RankingPage>('/api/profile/ranking', { params }).then((r) => r.data)
 }
