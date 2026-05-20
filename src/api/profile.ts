@@ -2,6 +2,7 @@ import client from './client'
 import type {
   MemberSummary,
   MemberDetail,
+  MemberTechStack,
   UpdateMemberRequest,
   MyTeam,
   Generation,
@@ -131,4 +132,10 @@ export function kickMember(teamId: number, memberId: number): Promise<void> {
 
 export function leaveTeam(teamId: number): Promise<void> {
   return client.delete(`/api/profile/teams/${teamId}/members/me`).then(() => undefined)
+}
+
+export function updateMyTechStacks(
+  stacks: { techStackId: number; proficiency?: number | null }[],
+): Promise<MemberTechStack[]> {
+  return client.put<MemberTechStack[]>('/api/profile/members/me/tech-stacks', stacks).then((r) => r.data)
 }

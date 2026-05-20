@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { usePageTransition } from '../hooks/usePageTransition'
 import { useAuth } from '../contexts/AuthContext'
-import { getMe, updateMe, getMyTeams, getGenerations, createGeneration, updateGeneration } from '../api/profile'
+import { getMe, updateMe, getMyTeams, getTechStacks, updateMyTechStacks, getGenerations, createGeneration, updateGeneration } from '../api/profile'
 import { getUsers, approveUser, rejectUser, type UserResponse } from '../api/admin'
-import type { MemberDetail, MyTeam, UpdateMemberRequest, SessionType, RoleInTeam, Generation, CreateGenerationRequest } from '../types/profile'
+import type { MemberDetail, MyTeam, UpdateMemberRequest, SessionType, RoleInTeam, TechStack, MemberTechStack, Generation, CreateGenerationRequest } from '../types/profile'
 
 const SESSION_OPTIONS: { value: SessionType; label: string }[] = [
   { value: 'backend', label: '백엔드' },
@@ -14,6 +14,16 @@ const SESSION_OPTIONS: { value: SessionType; label: string }[] = [
   { value: 'pm', label: 'PM' },
   { value: 'etc', label: '기타' },
 ]
+
+const CATEGORY_LABEL: Record<string, string> = {
+  language: '언어',
+  framework: '프레임워크',
+  ai: 'AI',
+  design: '디자인',
+  tool: '도구',
+  infra: '인프라',
+  etc: '기타',
+}
 
 const ROLE_LABEL: Record<RoleInTeam, string> = {
   backend: '백엔드',
@@ -65,6 +75,26 @@ function EditProfileModal({
   )
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [allStacks, setAllStacks] = useState<TechStack[]>([])
+  const [selectedStacks, setSelectedStacks] = useState<MemberTechStack[]>(member.techStacks)
+
+  useEffect(() => {
+    getTechStacks().then((r) => setAllStacks(r.techStacks))
+  }, [])
+
+  function toggleStack(stack: TechStack) {
+    setSelectedStacks((prev) => {
+      const exists = prev.find((s) => s.techStackId === stack.id)
+      if (exists) return prev.filter((s) => s.techStackId !== stack.id)
+      return [...prev, { techStackId: stack.id, name: stack.name, category: stack.category, logoUrl: stack.logoUrl, proficiency: null }]
+    })
+  }
+
+  function setProficiency(techStackId: number, value: number) {
+    setSelectedStacks((prev) =>
+      prev.map((s) => s.techStackId === techStackId ? { ...s, proficiency: s.proficiency === value ? null : value } : s)
+    )
+  }
 
   function addLink() {
     setLinkEntries((prev) => [...prev, { key: '', value: '' }])
@@ -86,16 +116,19 @@ function EditProfileModal({
     const linksObj = Object.fromEntries(linkEntries.filter((e) => e.key.trim() && e.value.trim()).map((e) => [e.key, e.value]))
     const linksJson = stringifyLinks(linksObj) || null
     try {
-      await updateMe({
-        ...form,
-        name: form.name.trim(),
-        department: form.department?.trim() || null,
-        githubUrl: form.githubUrl?.trim() || null,
-        profileImageUrl: form.profileImageUrl?.trim() || null,
-        displayedEmail: form.displayedEmail?.trim() || null,
-        intro: form.intro?.trim() || null,
-        linksJson,
-      })
+      await Promise.all([
+        updateMe({
+          ...form,
+          name: form.name.trim(),
+          department: form.department?.trim() || null,
+          githubUrl: form.githubUrl?.trim() || null,
+          profileImageUrl: form.profileImageUrl?.trim() || null,
+          displayedEmail: form.displayedEmail?.trim() || null,
+          intro: form.intro?.trim() || null,
+          linksJson,
+        }),
+        updateMyTechStacks(selectedStacks.map((s) => ({ techStackId: s.techStackId, proficiency: s.proficiency }))),
+      ])
       onSaved()
     } catch {
       setError('프로필 수정에 실패했습니다.')
@@ -189,6 +222,59 @@ function EditProfileModal({
               className="w-full px-3 py-2 text-sm bg-bg-secondary border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary/50 focus:outline-none focus:border-accent-primary/50 transition-colors resize-none"
             />
           </div>
+          {allStacks.length > 0 && (
+            <div>
+              <label className="block text-xs text-text-secondary mb-2">기술 스택</label>
+              {Object.entries(
+                allStacks.reduce<Record<string, TechStack[]>>((acc, s) => {
+                  ;(acc[s.category] ??= []).push(s)
+                  return acc
+                }, {})
+              ).map(([cat, stacks]) => (
+                <div key={cat} className="mb-3">
+                  <p className="text-[10px] text-text-tertiary mb-1.5">{CATEGORY_LABEL[cat] ?? cat}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {stacks.map((s) => {
+                      const sel = selectedStacks.find((x) => x.techStackId === s.id)
+                      return (
+                        <div key={s.id} className="flex flex-col items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => toggleStack(s)}
+                            className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                              sel
+                                ? 'border-accent-primary text-accent-primary bg-accent-muted'
+                                : 'border-border-default text-text-tertiary hover:border-accent-primary/40'
+                            }`}
+                          >
+                            {s.name}
+                          </button>
+                          {sel && (
+                            <div className="flex gap-0.5">
+                              {[1, 2, 3, 4, 5].map((n) => (
+                                <button
+                                  key={n}
+                                  type="button"
+                                  onClick={() => setProficiency(s.id, n)}
+                                  className={`text-[10px] transition-colors ${
+                                    sel.proficiency != null && n <= sel.proficiency
+                                      ? 'text-accent-primary'
+                                      : 'text-text-tertiary/30'
+                                  }`}
+                                >
+                                  ●
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs text-text-secondary">링크</label>
