@@ -81,8 +81,7 @@ export default function ArticleDetailPage() {
     )
   }
 
-  const canEdit = isAuthenticated && userId === post.authorId
-  const canDelete = isAuthenticated && (userId === post.authorId || role === 'ADMIN')
+  const canEdit = isAuthenticated && (userId === post.authorId || role === 'ADMIN')
 
   async function handleBookmark() {
     if (!isAuthenticated) {
@@ -149,9 +148,7 @@ export default function ArticleDetailPage() {
             </span>
           </div>
 
-<<<<<<< HEAD
           <div className="flex items-center gap-2">
-            {/* 답글 작성 버튼 (인증 유저만) */}
             {isAuthenticated && (
               <button
                 onClick={() => navigate(`/articles/write?replyTo=${post.id}`)}
@@ -164,22 +161,12 @@ export default function ArticleDetailPage() {
 
             {canEdit && (
               <>
-=======
-          {(canEdit || canDelete) && (
-            <div className="flex items-center gap-2">
-              {canEdit && (
->>>>>>> 58db76a (멤버/팀 반영)
                 <Link
                   to={`/articles/${post.id}/edit`}
                   className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
                 >
                   수정
                 </Link>
-<<<<<<< HEAD
-=======
-              )}
-              {canDelete && (
->>>>>>> 58db76a (멤버/팀 반영)
                 <button
                   onClick={handleDelete}
                   disabled={isDeleting}
@@ -187,15 +174,9 @@ export default function ArticleDetailPage() {
                 >
                   {isDeleting ? '삭제 중...' : '삭제'}
                 </button>
-<<<<<<< HEAD
               </>
             )}
           </div>
-=======
-              )}
-            </div>
-          )}
->>>>>>> 58db76a (멤버/팀 반영)
         </div>
 
         <h1 className="text-2xl md:text-3xl font-bold text-text-primary leading-snug break-keep">
