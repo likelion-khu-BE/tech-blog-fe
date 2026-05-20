@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { getUsers, approveUser, rejectUser, getPosts, updatePostStatus, deletePost, getStats, type UserResponse, type AdminPost, type AdminStats } from '../api/admin'
 import {
   getGenerations,
@@ -97,7 +98,11 @@ function UserManagement() {
               className="flex items-center justify-between px-4 py-3 rounded-lg bg-bg-secondary border border-border-default"
             >
               <div className="flex items-center gap-4 min-w-0">
-                <span className="text-sm text-text-primary truncate">{user.email}</span>
+                {user.status === 'ACTIVE' && user.memberId ? (
+                  <Link to={`/members/${user.memberId}`} className="text-sm text-text-primary truncate hover:text-accent-primary transition-colors">{user.email}</Link>
+                ) : (
+                  <span className="text-sm text-text-primary truncate">{user.email}</span>
+                )}
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[user.status] ?? ''}`}>
                   {user.status}
                 </span>
@@ -228,7 +233,7 @@ function ArticleManagement() {
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${POST_STATUS_BADGE[post.status] ?? ''}`}>
                   {post.status}
                 </span>
-                <span className="text-sm text-text-primary truncate">{post.title}</span>
+                <Link to={`/articles/${post.id}`} className="text-sm text-text-primary truncate hover:text-accent-primary transition-colors">{post.title}</Link>
                 <span className="text-xs text-text-tertiary shrink-0 hidden md:block">{post.board} · {post.category}</span>
                 <span className="text-xs text-text-tertiary shrink-0 hidden lg:block">{fmt(post.createdAt)}</span>
               </div>

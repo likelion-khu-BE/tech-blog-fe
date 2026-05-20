@@ -38,7 +38,7 @@ export interface MemberDetail {
   intro: string | null
   linksJson: string | null
   techStacks: MemberTechStack[]
-  generations: { generationNumber: number; roleInGen: GenerationRole }[]
+  generations: { generationNumber?: number; number?: number; roleInGen: GenerationRole }[]
   createdAt: string
   updatedAt?: string
 }

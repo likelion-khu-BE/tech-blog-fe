@@ -689,11 +689,20 @@ export default function MyProfilePage() {
               </button>
             </div>
             <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-text-tertiary">
-              {member.generations.map((g) => (
-                <span key={g.generationNumber}>
-                  {g.generationNumber}기{g.roleInGen === 'operating' && ' 운영진'}
-                </span>
-              ))}
+              {(() => {
+                const gens = member.generations
+                  .map((g) => ({ num: g.generationNumber ?? g.number, role: g.roleInGen }))
+                  .filter((g, i, arr) => g.num != null && arr.findIndex((x) => x.num === g.num) === i)
+                  .sort((a, b) => (a.num ?? 0) - (b.num ?? 0))
+                const members = gens.filter((g) => g.role !== 'operating').map((g) => g.num)
+                const operating = gens.filter((g) => g.role === 'operating').map((g) => g.num)
+                return (
+                  <>
+                    {members.length > 0 && <span>{members.join('/')}기 멤버</span>}
+                    {operating.length > 0 && <span>{operating.join('/')}기 운영진</span>}
+                  </>
+                )
+              })()}
               {member.department && <span>· {member.department}</span>}
               {member.displayedEmail && (
                 <a href={`mailto:${member.displayedEmail}`} className="hover:text-accent-primary transition-colors">
