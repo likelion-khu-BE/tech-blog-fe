@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { usePageTransition } from '../hooks/usePageTransition'
 import { useAuth } from '../contexts/AuthContext'
@@ -9,7 +9,7 @@ function TeamCard({ team }: { team: TeamSummary }) {
   return (
     <Link
       to={`/teams/${team.id}`}
-      className="group block border border-border-default rounded-lg overflow-hidden hover:border-accent-primary/40 transition-colors"
+      className="group block border border-border-default rounded-lg overflow-hidden hover:border-accent-primary/40 transition-colors bg-bg-secondary"
     >
       {team.thumbUrl ? (
         <div className="aspect-video bg-bg-secondary overflow-hidden">
@@ -36,17 +36,18 @@ function TeamCard({ team }: { team: TeamSummary }) {
         {team.description && (
           <p className="text-xs text-text-secondary line-clamp-2 mb-3 leading-relaxed">{team.description}</p>
         )}
-        <div className="flex items-center gap-2 flex-wrap">
-          {team.techStacks.slice(0, 4).map((ts) => (
-            <span
-              key={ts.id}
-              className="text-[10px] px-1.5 py-0.5 rounded bg-bg-tertiary text-text-tertiary"
-            >
-              {ts.name}
-            </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {team.techStacks.slice(0, 6).map((ts) => (
+            ts.logoUrl ? (
+              <span key={ts.id} className="flex items-center justify-center w-5 h-5 rounded bg-white/15 p-0.5 shrink-0">
+                <img src={ts.logoUrl} alt={ts.name} title={ts.name} className="w-full h-full object-contain" />
+              </span>
+            ) : (
+              <span key={ts.id} className="text-[10px] px-1.5 py-0.5 rounded bg-bg-tertiary text-text-tertiary">{ts.name}</span>
+            )
           ))}
-          {team.techStacks.length > 4 && (
-            <span className="text-[10px] text-text-tertiary">+{team.techStacks.length - 4}</span>
+          {team.techStacks.length > 6 && (
+            <span className="text-[10px] text-text-tertiary">+{team.techStacks.length - 6}</span>
           )}
         </div>
         <p className="mt-3 text-[10px] text-text-tertiary">멤버 {team.memberCount}명</p>
@@ -309,6 +310,7 @@ export default function TeamsPage() {
   const [generationFilter, setGenerationFilter] = useState<number | undefined>()
   const [myTeamsOnly, setMyTeamsOnly] = useState(false)
   const [generations, setGenerations] = useState<Generation[]>([])
+  const [query, setQuery] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [showJoinModal, setShowJoinModal] = useState(false)
   const [joinCode, setJoinCode] = useState('')
@@ -364,6 +366,11 @@ export default function TeamsPage() {
       .catch(() => setError('팀 목록을 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
   }, [generationFilter, myTeamsOnly, isAuthenticated])
+
+  const filteredTeams = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return q ? teams.filter((t) => t.name.toLowerCase().includes(q)) : teams
+  }, [teams, query])
 
   return (
     <main className="pt-14">
@@ -429,6 +436,21 @@ export default function TeamsPage() {
         )}
       </div>
 
+      <div className="max-w-[900px] mx-auto px-4 md:px-5 mb-4">
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-tertiary/50 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="팀 이름 검색"
+            className="w-full pl-8 pr-3 py-2 text-sm bg-bg-secondary border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary/50 focus:outline-none focus:border-accent-primary/50 transition-colors"
+          />
+        </div>
+      </div>
+
       <div className="max-w-[900px] mx-auto px-4 md:px-5 pb-20">
         {loading && (
           <div className="text-center py-20 text-text-tertiary text-sm">불러오는 중...</div>
@@ -436,12 +458,14 @@ export default function TeamsPage() {
         {error && (
           <div className="text-center py-20 text-text-tertiary text-sm">{error}</div>
         )}
-        {!loading && !error && teams.length === 0 && (
-          <div className="text-center py-20 text-text-tertiary text-sm">등록된 팀이 없습니다.</div>
+        {!loading && !error && filteredTeams.length === 0 && (
+          <div className="text-center py-20 text-text-tertiary text-sm">
+            {query.trim() ? '검색 결과가 없습니다.' : '등록된 팀이 없습니다.'}
+          </div>
         )}
-        {!loading && !error && teams.length > 0 && (
+        {!loading && !error && filteredTeams.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {teams.map((team) => (
+            {filteredTeams.map((team) => (
               <TeamCard key={team.id} team={team} />
             ))}
           </div>
