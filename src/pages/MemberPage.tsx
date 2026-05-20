@@ -185,12 +185,20 @@ export default function MemberPage() {
         </div>
 
         <div className="flex flex-wrap gap-2 mt-3 mb-4 text-xs text-text-tertiary">
-          {member.generations.map((g) => (
-            <span key={g.generationNumber}>
-              {g.generationNumber}기
-              {g.roleInGen === 'operating' && <span className="ml-1 text-accent-primary/80">운영진</span>}
-            </span>
-          ))}
+          {(() => {
+            const gens = member.generations
+              .map((g) => ({ num: g.generationNumber ?? g.number, role: g.roleInGen }))
+              .filter((g, i, arr) => g.num != null && arr.findIndex((x) => x.num === g.num) === i)
+              .sort((a, b) => (a.num ?? 0) - (b.num ?? 0))
+            const members = gens.filter((g) => g.role !== 'operating').map((g) => g.num)
+            const operating = gens.filter((g) => g.role === 'operating').map((g) => g.num)
+            return (
+              <>
+                {members.length > 0 && <span>{members.join('/')}기 멤버</span>}
+                {operating.length > 0 && <span>{operating.join('/')}기 <span className="text-accent-primary/80">운영진</span></span>}
+              </>
+            )
+          })()}
           {member.department && <span>· {member.department}</span>}
           <span>· {SESSION_LABEL[member.sessionType]}</span>
           {member.displayedEmail && (

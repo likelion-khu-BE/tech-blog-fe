@@ -4,6 +4,7 @@ import client from './client'
 
 export interface UserResponse {
   id: number
+  memberId: number | null
   email: string
   role: 'ADMIN' | 'MEMBER'
   status: 'PENDING' | 'ACTIVE' | 'REJECTED' | 'EXPIRED'
