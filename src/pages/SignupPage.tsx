@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom'
 import { signup } from '../api/auth'
 
 export default function SignupPage() {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [sessionType, setSessionType] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [error, setError] = useState('')
@@ -13,6 +15,16 @@ export default function SignupPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
+
+    if (!name.trim()) {
+      setError('이름을 입력해주세요')
+      return
+    }
+
+    if (!sessionType) {
+      setError('파트를 선택해주세요')
+      return
+    }
 
     if (password !== passwordConfirm) {
       setError('비밀번호가 일치하지 않습니다')
@@ -27,7 +39,7 @@ export default function SignupPage() {
     setIsSubmitting(true)
 
     try {
-      await signup({ email, password })
+      await signup({ email, password, name: name.trim(), sessionType })
       setIsSuccess(true)
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
@@ -73,6 +85,23 @@ export default function SignupPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
+            <label htmlFor="name" className="block text-sm text-text-secondary mb-1.5">
+              이름
+            </label>
+            <input
+              id="name"
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2.5 bg-bg-tertiary border border-border-default rounded-lg
+                         text-text-primary placeholder-text-tertiary
+                         focus:outline-none focus:border-accent-primary transition-colors"
+              placeholder="홍길동"
+            />
+          </div>
+
+          <div>
             <label htmlFor="email" className="block text-sm text-text-secondary mb-1.5">
               이메일
             </label>
@@ -87,6 +116,28 @@ export default function SignupPage() {
                          focus:outline-none focus:border-accent-primary transition-colors"
               placeholder="example@khu.ac.kr"
             />
+          </div>
+
+          <div>
+            <label htmlFor="sessionType" className="block text-sm text-text-secondary mb-1.5">
+              파트
+            </label>
+            <select
+              id="sessionType"
+              required
+              value={sessionType}
+              onChange={(e) => setSessionType(e.target.value)}
+              className="w-full px-3 py-2.5 bg-bg-tertiary border border-border-default rounded-lg
+                         text-text-primary focus:outline-none focus:border-accent-primary transition-colors"
+            >
+              <option value="">파트를 선택하세요</option>
+              <option value="backend">백엔드</option>
+              <option value="frontend">프론트엔드</option>
+              <option value="design">디자인</option>
+              <option value="ai">AI</option>
+              <option value="pm">PM</option>
+              <option value="etc">기타</option>
+            </select>
           </div>
 
           <div>

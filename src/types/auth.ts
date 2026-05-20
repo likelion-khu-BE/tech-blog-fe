@@ -26,6 +26,8 @@ export interface LoginRequest {
 export interface SignupRequest {
   email: string
   password: string
+  name: string
+  sessionType: string
 }
 
 // 프론트엔드 인증 상태

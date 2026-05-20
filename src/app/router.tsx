@@ -15,6 +15,7 @@ const LoginPage = lazy(() => import('../pages/LoginPage'))
 const SignupPage = lazy(() => import('../pages/SignupPage'))
 const SessionBoardPage = lazy(() => import('../pages/SessionBoardPage'))
 const AdminPage = lazy(() => import('../pages/AdminPage'))
+const MyProfilePage = lazy(() => import('../pages/MyProfilePage'))
 const TeamsPage = lazy(() => import('../pages/TeamsPage'))
 const TeamDetailPage = lazy(() => import('../pages/TeamDetailPage'))
 
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
       { path: 'signup', element: <SuspenseWrapper><SignupPage /></SuspenseWrapper> },
       { path: 'teams', element: <SuspenseWrapper><TeamsPage /></SuspenseWrapper> },
       { path: 'teams/:id', element: <SuspenseWrapper><TeamDetailPage /></SuspenseWrapper> },
+      { path: 'profile', element: <SuspenseWrapper><ProtectedRoute><MyProfilePage /></ProtectedRoute></SuspenseWrapper> },
       { path: 'admin', element: <SuspenseWrapper><ProtectedRoute requiredRole="ADMIN"><AdminPage /></ProtectedRoute></SuspenseWrapper> },
       { path: '*', element: <SuspenseWrapper><NotFoundPage /></SuspenseWrapper> },
     ],
