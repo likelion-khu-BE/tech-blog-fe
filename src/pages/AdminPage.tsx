@@ -317,6 +317,7 @@ function StatsSection() {
   )
 }
 
+
 // ── 기수 관리 ──
 
 const ROLE_OPTIONS: { value: GenerationRole; label: string }[] = [
