@@ -8,8 +8,20 @@ import {
   getGenerationMembers,
   addGenerationMember,
   getMembers,
+  getTechStacks,
+  createTechStack,
+  updateTechStack,
+  deleteTechStack,
 } from '../api/profile'
-import type { Generation, GenerationMember, GenerationRole, CreateGenerationRequest } from '../types/profile'
+import type {
+  Generation,
+  GenerationMember,
+  GenerationRole,
+  CreateGenerationRequest,
+  TechStack,
+  TechStackCategory,
+  CreateTechStackRequest,
+} from '../types/profile'
 
 // ── 회원 관리 ──
 
@@ -620,16 +632,235 @@ function GenerationManagement() {
   )
 }
 
+// ── 기술 스택 관리 ──
+
+const TECH_CATEGORIES: { value: TechStackCategory; label: string }[] = [
+  { value: 'language',  label: '언어' },
+  { value: 'framework', label: '프레임워크' },
+  { value: 'ai',        label: 'AI' },
+  { value: 'design',    label: '디자인' },
+  { value: 'tool',      label: '도구' },
+  { value: 'infra',     label: '인프라' },
+  { value: 'etc',       label: '기타' },
+]
+
+const CATEGORY_LABEL = Object.fromEntries(
+  TECH_CATEGORIES.map((c) => [c.value, c.label]),
+) as Record<TechStackCategory, string>
+
+function adminErrMsg(err: unknown, fallback: string): string {
+  if (err && typeof err === 'object' && 'response' in err) {
+    const r = (err as { response?: { data?: { message?: string } } }).response
+    return r?.data?.message || fallback
+  }
+  return fallback
+}
+
+function TechStackManagement() {
+  const [stacks, setStacks] = useState<TechStack[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<TechStackCategory | 'all'>('all')
+
+  const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState<TechStack | null>(null)
+  const emptyForm: CreateTechStackRequest = { name: '', category: 'language', logoUrl: '' }
+  const [form, setForm] = useState<CreateTechStackRequest>(emptyForm)
+  const [formLoading, setFormLoading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [actionId, setActionId] = useState<number | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const { techStacks } = await getTechStacks(filter === 'all' ? undefined : filter)
+      setStacks(techStacks)
+    } finally {
+      setLoading(false)
+    }
+  }, [filter])
+
+  useEffect(() => { load() }, [load])
+
+  function openCreate() {
+    setForm(emptyForm)
+    setEditing(null)
+    setFormError(null)
+    setShowForm(true)
+  }
+
+  function openEdit(ts: TechStack) {
+    setForm({ name: ts.name, category: ts.category, logoUrl: ts.logoUrl ?? '' })
+    setEditing(ts)
+    setFormError(null)
+    setShowForm(true)
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.name.trim()) return
+    setFormLoading(true)
+    setFormError(null)
+    const payload: CreateTechStackRequest = {
+      name: form.name.trim(),
+      category: form.category,
+      logoUrl: form.logoUrl?.trim() || null,
+    }
+    try {
+      if (editing) {
+        await updateTechStack(editing.id, payload)
+      } else {
+        await createTechStack(payload)
+      }
+      setShowForm(false)
+      await load()
+    } catch (err) {
+      setFormError(adminErrMsg(err, editing ? '수정에 실패했습니다.' : '등록에 실패했습니다.'))
+    } finally {
+      setFormLoading(false)
+    }
+  }
+
+  async function handleDelete(ts: TechStack) {
+    if (!confirm(`'${ts.name}'을(를) 삭제하시겠습니까?\n이 기술을 보유한 멤버·팀 연결도 함께 삭제됩니다.`)) return
+    setActionId(ts.id)
+    try {
+      await deleteTechStack(ts.id)
+      setStacks((prev) => prev.filter((s) => s.id !== ts.id))
+    } finally {
+      setActionId(null)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as TechStackCategory | 'all')}
+          className="px-3 py-1.5 text-xs bg-bg-primary border border-border-default rounded-lg text-text-secondary focus:outline-none focus:border-accent-primary/50"
+        >
+          <option value="all">전체 분류</option>
+          {TECH_CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </select>
+        <button
+          onClick={openCreate}
+          className="text-xs px-3 py-1.5 rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition-colors"
+        >
+          + 기술 스택 추가
+        </button>
+      </div>
+
+      {/* Create / Edit Form */}
+      {showForm && (
+        <div className="p-4 rounded-lg border border-border-default bg-bg-secondary">
+          <h3 className="text-sm font-semibold text-text-primary mb-4">
+            {editing ? `'${editing.name}' 수정` : '새 기술 스택'}
+          </h3>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">이름 *</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">분류 *</label>
+                <select
+                  value={form.category}
+                  onChange={(e) => setForm((p) => ({ ...p, category: e.target.value as TechStackCategory }))}
+                  className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
+                >
+                  {TECH_CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs text-text-secondary mb-1">로고 URL</label>
+                <input
+                  type="url"
+                  value={form.logoUrl ?? ''}
+                  onChange={(e) => setForm((p) => ({ ...p, logoUrl: e.target.value }))}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-primary/50"
+                />
+              </div>
+            </div>
+            {formError && <p className="text-xs text-red-400">{formError}</p>}
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors">
+                취소
+              </button>
+              <button type="submit" disabled={formLoading} className="flex-1 py-2 text-sm rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-40 transition-colors">
+                {formLoading ? '저장 중...' : (editing ? '수정' : '등록')}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Tech stack list */}
+      <div className={`space-y-2 transition-opacity duration-150 ${loading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+        {loading ? (
+          <p className="text-sm text-text-tertiary">불러오는 중...</p>
+        ) : stacks.length === 0 ? (
+          <p className="text-sm text-text-tertiary">등록된 기술 스택이 없습니다.</p>
+        ) : (
+          stacks.map((ts) => (
+            <div key={ts.id} className="flex items-center justify-between px-4 py-3 rounded-lg bg-bg-secondary border border-border-default gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-7 h-7 rounded bg-bg-tertiary flex items-center justify-center overflow-hidden shrink-0">
+                  {ts.logoUrl
+                    ? <img src={ts.logoUrl} alt={ts.name} className="w-full h-full object-contain" />
+                    : <span className="text-[10px] font-semibold text-text-tertiary">{ts.name.slice(0, 1)}</span>
+                  }
+                </div>
+                <span className="text-sm text-text-primary truncate">{ts.name}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-bg-tertiary text-text-tertiary shrink-0">
+                  {CATEGORY_LABEL[ts.category] ?? ts.category}
+                </span>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => openEdit(ts)}
+                  className="text-xs px-3 py-1.5 rounded-md bg-bg-tertiary text-text-secondary hover:bg-bg-elevated hover:text-text-primary transition-colors"
+                >
+                  수정
+                </button>
+                <button
+                  onClick={() => handleDelete(ts)}
+                  disabled={actionId === ts.id}
+                  className="text-xs px-3 py-1.5 rounded-md bg-bg-tertiary text-text-secondary hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
+                >
+                  삭제
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── 메인 페이지 ──
 
 const SECTIONS = [
   { key: 'users',       label: '회원 관리' },
   { key: 'articles',    label: '아티클 관리' },
   { key: 'generations', label: '기수 관리' },
+  { key: 'tech-stacks', label: '기술 스택' },
 ] as const
 
 export default function AdminPage() {
-  const [section, setSection] = useState<'users' | 'articles' | 'generations'>('users')
+  const [section, setSection] = useState<'users' | 'articles' | 'generations' | 'tech-stacks'>('users')
 
   return (
     <div className="max-w-[900px] mx-auto px-4 md:px-5 pt-24 pb-16">
@@ -656,6 +887,7 @@ export default function AdminPage() {
       {section === 'users' && <UserManagement />}
       {section === 'articles' && <ArticleManagement />}
       {section === 'generations' && <GenerationManagement />}
+      {section === 'tech-stacks' && <TechStackManagement />}
     </div>
   )
 }
