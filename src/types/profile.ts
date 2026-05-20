@@ -10,6 +10,13 @@ export interface TechStack {
   logoUrl: string | null
 }
 
+// 기술 스택 등록/수정 요청 (§3-2, §3-3) — name/category/logoUrl 전체 교체
+export interface CreateTechStackRequest {
+  name: string
+  category: TechStackCategory
+  logoUrl?: string | null
+}
+
 export interface MemberTechStack {
   techStackId: number
   name: string

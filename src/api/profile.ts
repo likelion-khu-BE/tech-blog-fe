@@ -13,6 +13,7 @@ import type {
   TeamDetail,
   TechStack,
   TechStackCategory,
+  CreateTechStackRequest,
   CreateTeamRequest,
   CreateTeamResponse,
   UpdateTeamRequest,
@@ -42,7 +43,10 @@ export function getMyTeams(): Promise<MyTeam[]> {
 }
 
 export function getMembers(params?: { generationNumber?: number; sessionType?: SessionType }): Promise<MemberSummary[]> {
-  return client.get<MemberSummary[]>('/api/profile/members', { params }).then((r) => r.data)
+  // 백엔드 쿼리 키는 generationId지만 값은 기수 '번호'다
+  // (MemberGenerationRepository: WHERE generation.number = :generationId)
+  const query = { generationId: params?.generationNumber, sessionType: params?.sessionType }
+  return client.get<MemberSummary[]>('/api/profile/members', { params: query }).then((r) => r.data)
 }
 
 export function getMember(memberId: number): Promise<MemberDetail> {
@@ -85,6 +89,28 @@ export function getTechStacks(category?: TechStackCategory): Promise<{ techStack
     .get<{ techStacks: TechStack[] }>('/api/profile/tech-stacks', {
       params: category ? { category } : undefined,
     })
+    .then((r) => r.data)
+}
+
+// §3-2 기술 스택 등록 (관리자) — 201 { id }
+export function createTechStack(req: CreateTechStackRequest): Promise<{ id: number }> {
+  return client.post<{ id: number }>('/api/profile/tech-stacks', req).then((r) => r.data)
+}
+
+// §3-3 기술 스택 수정 (관리자) — name/category/logoUrl 전체 교체, 200 { id }
+export function updateTechStack(techStackId: number, req: CreateTechStackRequest): Promise<{ id: number }> {
+  return client.put<{ id: number }>(`/api/profile/tech-stacks/${techStackId}`, req).then((r) => r.data)
+}
+
+// §3-4 기술 스택 삭제 (관리자) — 204
+export function deleteTechStack(techStackId: number): Promise<void> {
+  return client.delete(`/api/profile/tech-stacks/${techStackId}`).then(() => undefined)
+}
+
+// §4-1 멤버 기술 스택 조회 — 특정 멤버 보유 목록 (배열)
+export function getMemberTechStacks(memberId: number): Promise<MemberTechStack[]> {
+  return client
+    .get<MemberTechStack[]>(`/api/profile/members/${memberId}/tech-stacks`)
     .then((r) => r.data)
 }
 
