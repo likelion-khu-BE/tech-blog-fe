@@ -67,6 +67,16 @@ export function AppNavbar() {
           {isAuthenticated ? (
             <>
               <Link
+                to="/profile"
+                className={`text-xs md:text-sm px-2 md:px-3 py-1.5 rounded-md transition-colors ${
+                  pathname.startsWith('/profile')
+                    ? 'text-text-primary'
+                    : 'text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50'
+                }`}
+              >
+                내 프로필
+              </Link>
+              <Link
                 to="/articles/write"
                 className="ml-1 text-xs md:text-sm px-2 md:px-3 py-1.5 rounded-md bg-accent-muted text-accent-secondary hover:bg-accent-primary hover:text-white transition-colors"
               >

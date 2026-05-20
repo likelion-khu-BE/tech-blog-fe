@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { usePageTransition } from '../hooks/usePageTransition'
 import { useAuth } from '../contexts/AuthContext'
-import { getTeams, createTeam, getTechStacks } from '../api/profile'
-import type { TeamSummary, TechStack, CreateTeamRequest } from '../types/profile'
+import { getTeams, getMyTeams, createTeam, getTechStacks, joinTeam, getGenerations } from '../api/profile'
+import type { TeamSummary, MyTeam, TechStack, CreateTeamRequest, Generation } from '../types/profile'
 
 function TeamCard({ team }: { team: TeamSummary }) {
   return (
@@ -307,18 +307,63 @@ export default function TeamsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [generationFilter, setGenerationFilter] = useState<number | undefined>()
+  const [myTeamsOnly, setMyTeamsOnly] = useState(false)
+  const [generations, setGenerations] = useState<Generation[]>([])
   const [showModal, setShowModal] = useState(false)
+  const [showJoinModal, setShowJoinModal] = useState(false)
+  const [joinCode, setJoinCode] = useState('')
+  const [joining, setJoining] = useState(false)
+  const [joinError, setJoinError] = useState<string | null>(null)
+
+  async function handleJoin(e: React.FormEvent) {
+    e.preventDefault()
+    if (!joinCode.trim()) return
+    setJoining(true)
+    setJoinError(null)
+    try {
+      const res = await joinTeam(joinCode.trim())
+      setShowJoinModal(false)
+      setJoinCode('')
+      navigate(`/teams/${res.teamId}`)
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 404) setJoinError('유효하지 않은 초대 코드입니다.')
+      else if (status === 400) setJoinError('만료된 초대 코드입니다.')
+      else if (status === 409) setJoinError('이미 가입된 팀입니다.')
+      else setJoinError('가입에 실패했습니다.')
+    } finally {
+      setJoining(false)
+    }
+  }
 
   useEffect(() => {
+    getGenerations()
+      .then((gens) => setGenerations(gens.sort((a, b) => b.number - a.number)))
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (myTeamsOnly && !isAuthenticated) return
     setLoading(true)
     setError(null)
-    getTeams(generationFilter)
+    const fetch = myTeamsOnly
+      ? getMyTeams().then((list): TeamSummary[] =>
+          list.map((t: MyTeam) => ({
+            id: t.id,
+            name: t.name,
+            description: t.description,
+            generation: t.generation,
+            techStacks: t.techStacks,
+            memberCount: 0,
+            thumbUrl: t.thumbUrl,
+          }))
+        )
+      : getTeams(generationFilter)
+    fetch
       .then(setTeams)
       .catch(() => setError('팀 목록을 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
-  }, [generationFilter])
-
-  const generations = [undefined, 14, 13, 12] as const
+  }, [generationFilter, myTeamsOnly, isAuthenticated])
 
   return (
     <main className="pt-14">
@@ -328,17 +373,39 @@ export default function TeamsPage() {
         }`}
       >
         <p className="text-sm text-text-tertiary">멋쟁이사자처럼 경희대학교</p>
-        <h1 className="text-2xl md:text-4xl font-bold text-text-primary tracking-tight mt-1">팀</h1>
+        <div className="flex items-center justify-between mt-1">
+          <h1 className="text-2xl md:text-4xl font-bold text-text-primary tracking-tight">팀</h1>
+          {isAuthenticated && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setShowJoinModal(true); setJoinError(null); setJoinCode('') }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border-default text-text-secondary text-sm hover:bg-bg-tertiary/50 transition-colors"
+              >
+                코드로 가입
+              </button>
+              <button
+                onClick={() => setShowModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent-primary text-white text-sm hover:bg-accent-primary/90 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                팀 만들기
+              </button>
+            </div>
+          )}
+        </div>
       </section>
 
-      <div className="max-w-[900px] mx-auto px-4 md:px-5 mb-6">
+      <div className="max-w-[900px] mx-auto px-4 md:px-5 mb-6 flex items-center justify-between gap-4 flex-wrap">
         <nav className="flex items-center gap-1">
           <span className="text-[10px] text-text-tertiary/50 mr-1.5">기수</span>
-          {generations.map((g) => (
+          {[undefined, ...generations.map((g) => g.number)].map((g) => (
             <button
               key={g ?? 'all'}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all duration-200 cursor-pointer ${
-                generationFilter === g
+              disabled={myTeamsOnly}
+              className={`px-3 py-1.5 text-sm rounded-md transition-all duration-200 cursor-pointer disabled:opacity-40 ${
+                !myTeamsOnly && generationFilter === g
                   ? 'text-text-primary bg-bg-tertiary'
                   : 'text-text-tertiary hover:text-text-secondary hover:bg-bg-tertiary/50'
               }`}
@@ -348,6 +415,18 @@ export default function TeamsPage() {
             </button>
           ))}
         </nav>
+        {isAuthenticated && (
+          <button
+            onClick={() => setMyTeamsOnly((v) => !v)}
+            className={`px-3 py-1.5 text-sm rounded-md transition-all duration-200 cursor-pointer ${
+              myTeamsOnly
+                ? 'text-accent-secondary bg-accent-primary/10 border border-accent-primary/30'
+                : 'text-text-tertiary hover:text-text-secondary hover:bg-bg-tertiary/50 border border-border-default'
+            }`}
+          >
+            내 팀만 보기
+          </button>
+        )}
       </div>
 
       <div className="max-w-[900px] mx-auto px-4 md:px-5 pb-20">
@@ -369,18 +448,6 @@ export default function TeamsPage() {
         )}
       </div>
 
-      {isAuthenticated && (
-        <button
-          onClick={() => setShowModal(true)}
-          className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-accent-primary text-white flex items-center justify-center shadow-lg hover:bg-accent-primary/90 hover:scale-105 active:scale-95 transition-all duration-200 z-40"
-          aria-label="팀 생성"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      )}
-
       {showModal && (
         <CreateTeamModal
           onClose={() => setShowModal(false)}
@@ -389,6 +456,55 @@ export default function TeamsPage() {
             navigate(`/teams/${id}`)
           }}
         />
+      )}
+
+      {showJoinModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowJoinModal(false) }}
+        >
+          <div className="absolute inset-0 bg-black/10 backdrop-blur-sm" />
+          <div className="relative w-full max-w-sm bg-bg-primary border border-border-default rounded-xl shadow-xl">
+            <div className="flex items-center justify-between p-5 border-b border-border-default">
+              <h2 className="text-sm font-semibold text-text-primary">초대 코드로 팀 가입</h2>
+              <button
+                onClick={() => setShowJoinModal(false)}
+                className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleJoin} className="p-5 space-y-3">
+              <input
+                type="text"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value)}
+                placeholder="초대 코드를 입력하세요"
+                className="w-full px-3 py-2 text-sm bg-bg-secondary border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary/50 focus:outline-none focus:border-accent-primary/50 transition-colors font-mono tracking-widest"
+                autoFocus
+              />
+              {joinError && <p className="text-xs text-red-400">{joinError}</p>}
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowJoinModal(false)}
+                  className="flex-1 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={joining || !joinCode.trim()}
+                  className="flex-1 py-2 text-sm rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-40 transition-colors"
+                >
+                  {joining ? '가입 중...' : '가입'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </main>
   )
