@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-<<<<<<< HEAD
 import { getUsers, approveUser, rejectUser, getPosts, updatePostStatus, deletePost, getStats, type UserResponse, type AdminPost, type AdminStats } from '../api/admin'
-=======
-import { getUsers, approveUser, rejectUser, getPosts, updatePostStatus, deletePost, type UserResponse, type AdminPost } from '../api/admin'
 import {
   getGenerations,
   createGeneration,
@@ -12,7 +9,6 @@ import {
   getMembers,
 } from '../api/profile'
 import type { Generation, GenerationMember, GenerationRole, CreateGenerationRequest } from '../types/profile'
->>>>>>> 58db76a (멤버/팀 반영)
 
 // ── 회원 관리 ──
 
@@ -285,7 +281,6 @@ function ArticleManagement() {
   )
 }
 
-<<<<<<< HEAD
 // ── 통계 대시보드 ──
 
 const STAT_CARDS: { key: keyof AdminStats; label: string; colorClass: string }[] = [
@@ -318,7 +313,10 @@ function StatsSection() {
           </p>
         </div>
       ))}
-=======
+    </div>
+  )
+}
+
 // ── 기수 관리 ──
 
 const ROLE_OPTIONS: { value: GenerationRole; label: string }[] = [
@@ -612,7 +610,6 @@ function GenerationManagement() {
           ))}
         </div>
       )}
->>>>>>> 58db76a (멤버/팀 반영)
     </div>
   )
 }
