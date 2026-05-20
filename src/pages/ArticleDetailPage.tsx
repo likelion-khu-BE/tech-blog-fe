@@ -81,7 +81,8 @@ export default function ArticleDetailPage() {
     )
   }
 
-  const canEdit = isAuthenticated && (userId === post.authorId || role === 'ADMIN')
+  const canEdit = isAuthenticated && userId === post.authorId
+  const canDelete = isAuthenticated && (userId === post.authorId || role === 'ADMIN')
 
   async function handleBookmark() {
     if (!isAuthenticated) {
@@ -160,21 +161,21 @@ export default function ArticleDetailPage() {
             )}
 
             {canEdit && (
-              <>
-                <Link
-                  to={`/articles/${post.id}/edit`}
-                  className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
-                >
-                  수정
-                </Link>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="text-xs text-text-tertiary hover:text-red-400 transition-colors disabled:opacity-40"
-                >
-                  {isDeleting ? '삭제 중...' : '삭제'}
-                </button>
-              </>
+              <Link
+                to={`/articles/${post.id}/edit`}
+                className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
+              >
+                수정
+              </Link>
+            )}
+            {canDelete && (
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="text-xs text-text-tertiary hover:text-red-400 transition-colors disabled:opacity-40"
+              >
+                {isDeleting ? '삭제 중...' : '삭제'}
+              </button>
             )}
           </div>
         </div>
