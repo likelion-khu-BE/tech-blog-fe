@@ -147,6 +147,8 @@ export default function QnAPage() {
       } catch {
         if (seq !== requestSeq.current) return;
         setError("질문 목록을 불러오지 못했습니다.");
+      } finally {
+        if (seq === requestSeq.current) setIsLoading(false);
       }
     },
     [],
@@ -160,7 +162,7 @@ export default function QnAPage() {
       keyword: debouncedKeyword,
       tagId: selectedTag,
       generation,
-    }).finally(() => setIsLoading(false));
+    });
   }, [status, sort, debouncedKeyword, selectedTag, generation, fetchQuestions]);
 
   async function handleCreateTag(e: React.FormEvent) {
@@ -242,7 +244,6 @@ export default function QnAPage() {
               strokeLinejoin="round"
               d="M21 21l-4.35-4.35"
             />
-            그{" "}
           </svg>
           <input
             type="text"
