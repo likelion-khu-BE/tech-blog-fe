@@ -40,7 +40,7 @@ export default function QnADetailPage() {
   const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
-    if (!id) return
+    if (!id) { setIsLoading(false); return }
     setIsLoading(true)
     setNotFound(false)
     Promise.all([getQuestion(Number(id)), getAnswers(Number(id))])
@@ -380,6 +380,12 @@ function AnswerItem({
   onUpdate: (updated: AnswerDetail) => void
 }) {
   const [answer, setAnswer] = useState(initialAnswer)
+
+  useEffect(() => {
+    setAnswer(initialAnswer)
+    setUpvoteCount(initialAnswer.upvoteCount)
+    setDownvoteCount(initialAnswer.downvoteCount)
+  }, [initialAnswer])
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false)
