@@ -19,7 +19,7 @@ export default function QnAEditPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    if (!id) return
+    if (!id) { setIsLoading(false); return }
     Promise.all([getQuestion(Number(id)), getTags()])
       .then(([q, allTags]) => {
         if (q.author.userId !== userId) {
