@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { usePageTransition } from '../hooks/usePageTransition'
-import { useArticleReadStatus } from '../hooks/useArticleReadStatus'
 import { ArticleListItem } from '../components/article/ArticleListItem'
 import { CategoryTabs } from '../components/article/CategoryTabs'
 import { getPosts } from '../api/posts'
@@ -18,7 +17,6 @@ interface LocationState {
 
 export default function ArticlesPage() {
   const visible = usePageTransition()
-  const { isNew, markAsRead } = useArticleReadStatus()
   const location = useLocation()
   const locState = (location.state ?? {}) as LocationState
 
@@ -197,8 +195,6 @@ export default function ArticlesPage() {
                 <ArticleListItem
                   key={post.id}
                   post={post}
-                  showNewBadge={isNew(post)}
-                  onClick={() => markAsRead(post.id)}
                 />
               ))}
             </div>
