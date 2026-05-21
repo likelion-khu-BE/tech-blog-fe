@@ -31,8 +31,7 @@ export interface AnswerDetail {
   id: number
   content: string
   accepted: boolean
-  upvoteCount: number
-  downvoteCount: number
+  voteCount: number
   commentCount: number
   author: QnaMember
   createdAt: string
