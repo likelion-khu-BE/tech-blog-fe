@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
 import type { Post, PostSummary, PostPage } from '../types/post'
 import type { AdminStats, AdminPostPage } from '../api/admin'
+import type { Comment } from '../types/comment'
 
 // ── 게시글 픽스처 ──────────────────────────────────────────────
 
@@ -61,6 +62,42 @@ export const EMPTY_PAGE: PostPage = {
   size: 10,
   first: true,
   last: true,
+}
+
+// ── 댓글 픽스처 ───────────────────────────────────────────────
+
+export const MOCK_COMMENT: Comment = {
+  id: 10,
+  content: '테스트 댓글입니다.',
+  userId: 1625,
+  parentId: null,
+  likeCount: 0,
+  liked: false,
+  createdAt: '2025-01-01T00:00:00',
+  replies: [],
+}
+
+export const MOCK_COMMENT_DELETED: Comment = {
+  ...MOCK_COMMENT,
+  id: 11,
+  content: '삭제된 댓글입니다.',
+  userId: null,
+}
+
+export const MOCK_COMMENT_WITH_REPLY: Comment = {
+  ...MOCK_COMMENT,
+  replies: [
+    {
+      id: 12,
+      content: '대댓글입니다.',
+      userId: 100,
+      parentId: 10,
+      likeCount: 0,
+      liked: false,
+      createdAt: '2025-01-01T01:00:00',
+      replies: [],
+    },
+  ],
 }
 
 // ── 어드민 픽스처 ──────────────────────────────────────────────

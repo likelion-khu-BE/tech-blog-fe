@@ -10,9 +10,6 @@ import { MOCK_PAGE, EMPTY_PAGE, GUEST_AUTH } from './fixtures'
 vi.mock('../contexts/AuthContext', () => ({ useAuth: vi.fn() }))
 vi.mock('../api/posts', () => ({ getPosts: vi.fn() }))
 vi.mock('../hooks/usePageTransition', () => ({ usePageTransition: () => true }))
-vi.mock('../hooks/useArticleReadStatus', () => ({
-  useArticleReadStatus: () => ({ isNew: () => false, markAsRead: vi.fn() }),
-}))
 
 import { useAuth } from '../contexts/AuthContext'
 import { getPosts } from '../api/posts'
