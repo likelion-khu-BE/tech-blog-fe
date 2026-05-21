@@ -3,15 +3,42 @@
  */
 
 import { test, expect } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import { loginAs } from './helpers'
 
-async function getFirstArticleId(page: import('@playwright/test').Page): Promise<number | null> {
+// 비로그인 상태에서 첫 게시글 ID 반환 (page.goto 사용 가능)
+async function getFirstArticleId(page: Page): Promise<number | null> {
   await page.goto('/articles')
-  const link = page.locator('a[href^="/articles/"]').first()
-  await expect(link).toBeVisible({ timeout: 8_000 })
+  const link = page.locator('main a[href]').filter({ hasText: /.+/ }).first()
+  try {
+    await expect(link).toBeVisible({ timeout: 8_000 })
+  } catch {
+    return null
+  }
   const href = await link.getAttribute('href')
   const match = href?.match(/\/articles\/(\d+)/)
   return match ? Number(match[1]) : null
+}
+
+// 로그인 후 SPA 클릭 내비게이션으로 첫 게시글 상세 페이지 이동 (in-memory 토큰 보존)
+// loginAs 후 homepage(/)에서 호출해야 함
+async function navigateToFirstArticleSpa(page: Page): Promise<number | null> {
+  await page.getByRole('link', { name: '아티클' }).click()
+  await page.waitForURL(/\/articles/, { timeout: 8_000 })
+
+  const link = page.locator('main a[href]').filter({ hasText: /.+/ }).first()
+  try {
+    await expect(link).toBeVisible({ timeout: 8_000 })
+  } catch {
+    return null
+  }
+  const href = await link.getAttribute('href')
+  const match = href?.match(/\/articles\/(\d+)/)
+  if (!match) return null
+  const postId = Number(match[1])
+  await link.click()
+  await page.waitForURL(/\/articles\/\d+/, { timeout: 8_000 })
+  return postId
 }
 
 test.describe('ArticleDetailPage — #5 답글 버튼 역할별 표시', () => {
@@ -26,19 +53,17 @@ test.describe('ArticleDetailPage — #5 답글 버튼 역할별 표시', () => {
 
   test('[멤버] 답글 작성 버튼이 보인다', async ({ page }) => {
     await loginAs(page, 'member')
-    const postId = await getFirstArticleId(page)
+    const postId = await navigateToFirstArticleSpa(page)
     expect(postId, 'DB에 게시글이 없습니다').not.toBeNull()
 
-    await page.goto(`/articles/${postId}`)
     await expect(page.getByRole('button', { name: '답글 작성' })).toBeVisible({ timeout: 8_000 })
   })
 
   test('[어드민] 답글 작성 버튼이 보인다', async ({ page }) => {
     await loginAs(page, 'admin')
-    const postId = await getFirstArticleId(page)
+    const postId = await navigateToFirstArticleSpa(page)
     expect(postId, 'DB에 게시글이 없습니다').not.toBeNull()
 
-    await page.goto(`/articles/${postId}`)
     await expect(page.getByRole('button', { name: '답글 작성' })).toBeVisible({ timeout: 8_000 })
   })
 })
@@ -46,10 +71,9 @@ test.describe('ArticleDetailPage — #5 답글 버튼 역할별 표시', () => {
 test.describe('ArticleDetailPage — #5 답글 작성 플로우', () => {
   test('[멤버] 답글 작성 버튼 → 작성 폼 이동 및 원글 배너 표시', async ({ page }) => {
     await loginAs(page, 'member')
-    const postId = await getFirstArticleId(page)
+    const postId = await navigateToFirstArticleSpa(page)
     expect(postId, 'DB에 게시글이 없습니다').not.toBeNull()
 
-    await page.goto(`/articles/${postId}`)
     await page.getByRole('button', { name: '답글 작성' }).click()
 
     await expect(page).toHaveURL(new RegExp(`/articles/write\\?replyTo=${postId}`))
