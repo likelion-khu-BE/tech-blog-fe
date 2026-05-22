@@ -77,16 +77,28 @@ test.describe('아티클 작성 — 버튼 활성화 조건', () => {
 // ── 임시저장 (DRAFT) ──────────────────────────────────────────
 
 test.describe('아티클 작성 — 임시저장', () => {
-  test('임시저장 클릭 시 게시글 상세 페이지로 이동한다', async ({ page }) => {
+  test('임시저장 클릭 시 DRAFT 상태로 저장되고 상세 페이지로 이동한다', async ({ page }) => {
     await loginAs(page, 'member')
     await goToWritePage(page)
 
     const { title } = await fillWriteForm(page)
-    await page.getByRole('button', { name: '임시저장' }).click()
 
-    // 게시글 상세 페이지 /articles/{id} 로 이동
+    // POST /api/blog/posts 응답을 가로채 status 검증
+    const [createResponse] = await Promise.all([
+      page.waitForResponse(
+        (res) =>
+          res.url().includes('/api/blog/posts') &&
+          res.request().method() === 'POST' &&
+          !res.url().includes('/submit') &&
+          !res.url().includes('/admin'),
+        { timeout: 10_000 }
+      ),
+      page.getByRole('button', { name: '임시저장' }).click(),
+    ])
+    const body = await createResponse.json()
+    expect(body.status).toBe('DRAFT')
+
     await expect(page).toHaveURL(/\/articles\/\d+/, { timeout: 10_000 })
-    // 내 글 목록이나 상세에서 제목 확인
     await expect(page.locator('h1').first()).toContainText(title, { timeout: 8_000 })
   })
 })
