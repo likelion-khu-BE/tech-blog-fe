@@ -72,9 +72,12 @@ export default function ArticlesPage() {
   }, [])
 
   useEffect(() => {
+    let active = true
     setIsLoading(true)
     setError(null)
     fetchPosts({ board, generation, authorId, keyword: debouncedKeyword }, 0, false)
+      .finally(() => { if (active) setIsLoading(false) })
+    return () => { active = false }
   }, [board, generation, authorId, debouncedKeyword, fetchPosts])
 
   async function handleLoadMore() {
