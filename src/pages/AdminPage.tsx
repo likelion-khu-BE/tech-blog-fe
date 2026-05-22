@@ -160,18 +160,15 @@ const POST_STATUS_TABS: { key: AdminPostStatus; label: string }[] = [
   { key: 'PENDING_REVIEW', label: '검토 대기' },
   { key: 'PUBLISHED',      label: '게시됨' },
   { key: 'REJECTED',       label: '거부됨' },
-  { key: 'DRAFT',          label: '초안' },
 ]
 
 const POST_STATUS_BADGE: Record<AdminPostStatus, string> = {
-  DRAFT:          'bg-gray-500/15 text-gray-400',
   PENDING_REVIEW: 'bg-yellow-500/15 text-yellow-400',
   PUBLISHED:      'bg-green-500/15 text-green-400',
   REJECTED:       'bg-red-500/15 text-red-400',
 }
 
 const POST_STATUS_LABEL: Record<AdminPostStatus, string> = {
-  DRAFT:          '초안',
   PENDING_REVIEW: '검토 대기',
   PUBLISHED:      '게시됨',
   REJECTED:       '거부됨',
@@ -375,7 +372,6 @@ const STAT_CARDS: { key: keyof AdminStats; label: string; colorClass: string }[]
   { key: 'pendingReviewPosts',label: '검토 대기',    colorClass: 'text-yellow-400' },
   { key: 'publishedPosts',    label: '게시된 글',    colorClass: 'text-green-400' },
   { key: 'rejectedPosts',     label: '거부됨',       colorClass: 'text-red-400' },
-  { key: 'draftPosts',        label: '초안',         colorClass: 'text-gray-400' },
   { key: 'totalComments',     label: '총 댓글',      colorClass: 'text-text-primary' },
 ]
 

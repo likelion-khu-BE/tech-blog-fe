@@ -31,7 +31,7 @@ export async function rejectUser(id: number): Promise<UserResponse> {
 
 // ── 아티클 관리 ──
 
-export type AdminPostStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'REJECTED'
+export type AdminPostStatus = 'PENDING_REVIEW' | 'PUBLISHED' | 'REJECTED'
 
 export interface AdminPost {
   id: number
@@ -79,7 +79,6 @@ export async function deletePost(id: number): Promise<void> {
 
 export interface AdminStats {
   totalPosts: number
-  draftPosts: number
   pendingReviewPosts: number
   publishedPosts: number
   rejectedPosts: number
