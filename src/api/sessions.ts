@@ -74,6 +74,12 @@ export function getSessions(generationNumber: number, params?: { status?: Sessio
     .then((r) => r.data.sessions)
 }
 
+export function getSession(generationNumber: number, sessionId: number) {
+  return client
+    .get<ApiSession>(`/api/session-board/${generationNumber}/sessions/${sessionId}`)
+    .then((r) => r.data)
+}
+
 export function createSession(
   generationNumber: number,
   data: {
