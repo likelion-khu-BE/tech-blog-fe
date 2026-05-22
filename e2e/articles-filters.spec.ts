@@ -225,8 +225,11 @@ test.describe('아티클 필터 E2E', () => {
     const totalText = await page.locator('p.tabular-nums').textContent()
     const total     = parseInt(totalText ?? '0')
 
-    await page.getByRole('button', { name: '14기' }).click()
-    await page.waitForTimeout(800)
+    await Promise.all([
+      page.waitForResponse(r => r.url().includes('/api/blog/posts') && r.status() === 200),
+      page.getByRole('button', { name: '14기' }).click(),
+    ])
+    await expect(page.locator('p.tabular-nums')).not.toContainText('—', { timeout: 5_000 })
     await expect(page.locator('text=게시글을 불러오지 못했습니다.')).not.toBeVisible()
 
     await expect(page.locator('p.tabular-nums')).not.toContainText('—', { timeout: 5_000 })
@@ -241,9 +244,14 @@ test.describe('아티클 필터 E2E', () => {
     await expect(page.locator('p.tabular-nums')).not.toContainText('—', { timeout: 5_000 })
     const totalText = await page.locator('p.tabular-nums').textContent()
 
-    await page.getByRole('button', { name: '15기' }).click()
-    await page.waitForTimeout(800)
-    await page.getByRole('button', { name: '전체 기수' }).click()
+    await Promise.all([
+      page.waitForResponse(r => r.url().includes('/api/blog/posts') && r.status() === 200),
+      page.getByRole('button', { name: '15기' }).click(),
+    ])
+    await Promise.all([
+      page.waitForResponse(r => r.url().includes('/api/blog/posts') && r.status() === 200),
+      page.getByRole('button', { name: '전체 기수' }).click(),
+    ])
     await waitForArticles(page)
     await expect(page.locator('p.tabular-nums')).not.toContainText('—', { timeout: 5_000 })
 

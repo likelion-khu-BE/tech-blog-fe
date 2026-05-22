@@ -85,6 +85,7 @@ export default function ArticlesPage() {
 
   function handleBoardChange(b: string) {
     if (b === board) return
+    setIsLoading(true)
     setBoard(b)
     setPosts([])
   }
