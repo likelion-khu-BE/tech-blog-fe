@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { getUsers, approveUser, rejectUser, getPosts, updatePostStatus, deletePost, getStats, type UserResponse, type AdminPost, type AdminStats } from '../api/admin'
+import { getUsers, approveUser, rejectUser, getPosts, publishPost, rejectPost, deletePost, getStats, type UserResponse, type AdminPost, type AdminPostStatus, type AdminStats } from '../api/admin'
 import {
   getGenerations,
   createGeneration,
@@ -156,48 +156,74 @@ function UserManagement() {
 
 // ── 아티클 관리 ──
 
-const POST_STATUS_TABS = [
-  { key: 'DRAFT',     label: '드래프트' },
-  { key: 'PUBLISHED', label: '게시됨' },
-] as const
+const POST_STATUS_TABS: { key: AdminPostStatus; label: string }[] = [
+  { key: 'PENDING_REVIEW', label: '검토 대기' },
+  { key: 'PUBLISHED',      label: '게시됨' },
+  { key: 'REJECTED',       label: '거부됨' },
+  { key: 'DRAFT',          label: '초안' },
+]
 
-const POST_STATUS_BADGE: Record<string, string> = {
-  DRAFT:     'bg-yellow-500/15 text-yellow-400',
-  PUBLISHED: 'bg-green-500/15 text-green-400',
+const POST_STATUS_BADGE: Record<AdminPostStatus, string> = {
+  DRAFT:          'bg-gray-500/15 text-gray-400',
+  PENDING_REVIEW: 'bg-yellow-500/15 text-yellow-400',
+  PUBLISHED:      'bg-green-500/15 text-green-400',
+  REJECTED:       'bg-red-500/15 text-red-400',
+}
+
+const POST_STATUS_LABEL: Record<AdminPostStatus, string> = {
+  DRAFT:          '초안',
+  PENDING_REVIEW: '검토 대기',
+  PUBLISHED:      '게시됨',
+  REJECTED:       '거부됨',
 }
 
 function ArticleManagement() {
-  const [tab, setTab] = useState<'DRAFT' | 'PUBLISHED'>('DRAFT')
+  const [tab, setTab] = useState<AdminPostStatus>('PENDING_REVIEW')
   const [posts, setPosts] = useState<AdminPost[]>([])
   const [loading, setLoading] = useState(true)
   const [actionId, setActionId] = useState<number | null>(null)
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
+  const [rejectingId, setRejectingId] = useState<number | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const result = await getPosts(page, 20)
-      const filtered = result.content.filter(p => p.status === tab)
-      setPosts(filtered)
+      const result = await getPosts(tab, page, 20)
+      setPosts(result.content)
       setTotalPages(result.totalPages)
     } finally {
       setLoading(false)
     }
   }, [tab, page])
 
-  useEffect(() => {
-    setPage(0)
-  }, [tab])
-
+  useEffect(() => { setPage(0) }, [tab])
   useEffect(() => { load() }, [load])
 
-  async function handleToggleStatus(post: AdminPost) {
-    setActionId(post.id)
+  async function handlePublish(id: number) {
+    setActionId(id)
     try {
-      const next = post.status === 'DRAFT' ? 'PUBLISHED' : 'DRAFT'
-      const updated = await updatePostStatus(post.id, next)
-      setPosts(prev => prev.filter(p => p.id !== updated.id))
+      await publishPost(id)
+      setPosts(prev => prev.filter(p => p.id !== id))
+    } finally {
+      setActionId(null)
+    }
+  }
+
+  function openReject(id: number) {
+    setRejectingId(id)
+    setRejectReason('')
+  }
+
+  async function handleRejectConfirm() {
+    if (!rejectingId || !rejectReason.trim()) return
+    setActionId(rejectingId)
+    try {
+      await rejectPost(rejectingId, rejectReason.trim())
+      setPosts(prev => prev.filter(p => p.id !== rejectingId))
+      setRejectingId(null)
+      setRejectReason('')
     } finally {
       setActionId(null)
     }
@@ -237,39 +263,83 @@ function ArticleManagement() {
           <p className="text-text-tertiary text-sm">해당하는 아티클이 없습니다.</p>
         ) : (
           posts.map(post => (
-            <div
-              key={post.id}
-              className="flex items-center justify-between px-4 py-3 rounded-lg bg-bg-secondary border border-border-default gap-4"
-            >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${POST_STATUS_BADGE[post.status] ?? ''}`}>
-                  {post.status}
-                </span>
-                <Link to={`/articles/${post.id}`} className="text-sm text-text-primary truncate hover:text-accent-primary transition-colors">{post.title}</Link>
-                <span className="text-xs text-text-tertiary shrink-0 hidden md:block">{post.board} · {post.category}</span>
-                <span className="text-xs text-text-tertiary shrink-0 hidden lg:block">{fmt(post.createdAt)}</span>
+            <div key={post.id} className="rounded-lg bg-bg-secondary border border-border-default overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 gap-4">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${POST_STATUS_BADGE[post.status]}`}>
+                    {POST_STATUS_LABEL[post.status]}
+                  </span>
+                  <Link to={`/articles/${post.id}`} className="text-sm text-text-primary truncate hover:text-accent-primary transition-colors">
+                    {post.title}
+                  </Link>
+                  <span className="text-xs text-text-tertiary shrink-0 hidden md:block">{post.board} · {post.category}</span>
+                  <span className="text-xs text-text-tertiary shrink-0 hidden lg:block">{fmt(post.createdAt)}</span>
+                </div>
+
+                <div className="flex gap-2 shrink-0">
+                  {post.status === 'PENDING_REVIEW' && (
+                    <>
+                      <button
+                        onClick={() => handlePublish(post.id)}
+                        disabled={actionId === post.id}
+                        className="text-xs px-3 py-1.5 rounded-md bg-accent-primary text-white hover:bg-accent-secondary transition-colors disabled:opacity-50"
+                      >
+                        발행
+                      </button>
+                      <button
+                        onClick={() => openReject(post.id)}
+                        disabled={actionId === post.id}
+                        className="text-xs px-3 py-1.5 rounded-md bg-bg-tertiary text-text-secondary hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
+                      >
+                        거부
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => handleDelete(post.id)}
+                    disabled={actionId === post.id}
+                    className="text-xs px-3 py-1.5 rounded-md bg-bg-tertiary text-text-secondary hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
+                  >
+                    삭제
+                  </button>
+                </div>
               </div>
 
-              <div className="flex gap-2 shrink-0">
-                <button
-                  onClick={() => handleToggleStatus(post)}
-                  disabled={actionId === post.id}
-                  className={`text-xs px-3 py-1.5 rounded-md transition-colors disabled:opacity-50 ${
-                    post.status === 'DRAFT'
-                      ? 'bg-accent-primary text-white hover:bg-accent-secondary'
-                      : 'bg-bg-tertiary text-text-secondary hover:bg-yellow-500/20 hover:text-yellow-400'
-                  }`}
-                >
-                  {post.status === 'DRAFT' ? '게시' : '드래프트'}
-                </button>
-                <button
-                  onClick={() => handleDelete(post.id)}
-                  disabled={actionId === post.id}
-                  className="text-xs px-3 py-1.5 rounded-md bg-bg-tertiary text-text-secondary hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
-                >
-                  삭제
-                </button>
-              </div>
+              {/* 거부 사유 표시 (REJECTED 탭) */}
+              {post.status === 'REJECTED' && post.rejectedReason && (
+                <div className="px-4 py-2 border-t border-border-default bg-red-500/5">
+                  <p className="text-xs text-red-400">거부 사유: {post.rejectedReason}</p>
+                </div>
+              )}
+
+              {/* 거부 사유 입력 인라인 폼 */}
+              {rejectingId === post.id && (
+                <div className="px-4 py-3 border-t border-border-default bg-bg-tertiary space-y-2">
+                  <p className="text-xs text-text-tertiary">거부 사유를 입력하세요 (작성자에게 전달됩니다)</p>
+                  <textarea
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    rows={3}
+                    placeholder="예: 내용이 주제와 맞지 않습니다."
+                    className="w-full text-xs bg-bg-secondary border border-border-default rounded-md px-3 py-2 text-text-primary placeholder-text-tertiary/40 outline-none resize-none focus:border-border-hover"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => { setRejectingId(null); setRejectReason('') }}
+                      className="text-xs px-3 py-1.5 rounded-md bg-bg-elevated text-text-secondary hover:text-text-primary transition-colors"
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={handleRejectConfirm}
+                      disabled={!rejectReason.trim() || actionId === post.id}
+                      className="text-xs px-3 py-1.5 rounded-md bg-red-500/80 hover:bg-red-500 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {actionId === post.id ? '처리 중...' : '거부 확정'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))
         )}
@@ -301,10 +371,12 @@ function ArticleManagement() {
 // ── 통계 대시보드 ──
 
 const STAT_CARDS: { key: keyof AdminStats; label: string; colorClass: string }[] = [
-  { key: 'totalPosts',     label: '전체 게시글',  colorClass: 'text-accent-secondary' },
-  { key: 'publishedPosts', label: '게시된 글',    colorClass: 'text-green-400' },
-  { key: 'draftPosts',     label: '초안',         colorClass: 'text-yellow-400' },
-  { key: 'totalComments',  label: '총 댓글',      colorClass: 'text-text-primary' },
+  { key: 'totalPosts',        label: '전체 게시글',  colorClass: 'text-accent-secondary' },
+  { key: 'pendingReviewPosts',label: '검토 대기',    colorClass: 'text-yellow-400' },
+  { key: 'publishedPosts',    label: '게시된 글',    colorClass: 'text-green-400' },
+  { key: 'rejectedPosts',     label: '거부됨',       colorClass: 'text-red-400' },
+  { key: 'draftPosts',        label: '초안',         colorClass: 'text-gray-400' },
+  { key: 'totalComments',     label: '총 댓글',      colorClass: 'text-text-primary' },
 ]
 
 function StatsSection() {
@@ -321,7 +393,7 @@ function StatsSection() {
   }, [])
 
   return (
-    <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 transition-opacity duration-150 ${loading ? 'opacity-40' : 'opacity-100'}`}>
+    <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8 transition-opacity duration-150 ${loading ? 'opacity-40' : 'opacity-100'}`}>
       {STAT_CARDS.map(({ key, label, colorClass }) => (
         <div key={key} className="px-4 py-4 rounded-lg bg-bg-secondary border border-border-default">
           <p className="text-xs text-text-tertiary mb-2">{label}</p>
