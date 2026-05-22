@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { usePageTransition } from '../hooks/usePageTransition'
-import { createPost, updatePost, getPost } from '../api/posts'
+import { createPost, updatePost, getPost, submitPost } from '../api/posts'
 import { BOARDS, CATEGORIES } from '../types/post'
 import type { PostStatus } from '../types/post'
 
@@ -48,6 +48,7 @@ export default function ArticleWritePage() {
   const [tab, setTab] = useState<Tab>('write')
   const [isLoading, setIsLoading] = useState(isEditMode)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tagInput, setTagInput] = useState('')
   const tagInputRef = useRef<HTMLInputElement>(null)
@@ -90,37 +91,55 @@ export default function ArticleWritePage() {
 
   const isValid = form.title.trim().length > 0 && form.content.trim().length > 0 && form.category.trim().length > 0
 
-  async function handleSubmit() {
-    if (!isValid || isSubmitting) return
-    setIsSubmitting(true)
-    setError(null)
+  const buildBody = () => ({
+    title: form.title,
+    content: form.content,
+    board: form.board,
+    category: form.category,
+    status: form.status,
+    tags: form.tags,
+  })
 
+  // 임시저장: DRAFT 상태로 저장만 (제출하지 않음)
+  async function handleSave() {
+    if (!isValid || isSaving) return
+    setIsSaving(true)
+    setError(null)
     try {
       if (isEditMode && id) {
-        const updated = await updatePost(Number(id), {
-          title: form.title,
-          content: form.content,
-          board: form.board,
-          category: form.category,
-          status: form.status,
-          tags: form.tags,
-        })
+        const updated = await updatePost(Number(id), buildBody())
         navigate(`/articles/${updated.id}`, { replace: true })
       } else {
-        const created = await createPost({
-          title: form.title,
-          content: form.content,
-          board: form.board,
-          category: form.category,
-          status: form.status,
-          tags: form.tags,
-          replyToId: replyToId ?? undefined,
-        })
+        const created = await createPost({ ...buildBody(), replyToId: replyToId ?? undefined })
         navigate(`/articles/${created.id}`, { replace: true })
       }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setError(msg ?? '저장에 실패했습니다. 다시 시도해주세요.')
+      setError(msg ?? '저장에 실패했습니다.')
+      setIsSaving(false)
+    }
+  }
+
+  // 제출: 저장 후 PENDING_REVIEW로 전환 (PUBLISHED 상태면 그냥 저장)
+  async function handleSubmit() {
+    if (!isValid || isSubmitting) return
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      if (isEditMode && id) {
+        const updated = await updatePost(Number(id), buildBody())
+        if (updated.status !== 'PUBLISHED') {
+          await submitPost(updated.id)
+        }
+        navigate(`/articles/${updated.id}`, { replace: true })
+      } else {
+        const created = await createPost({ ...buildBody(), replyToId: replyToId ?? undefined })
+        await submitPost(created.id)
+        navigate(`/articles/${created.id}`, { replace: true })
+      }
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setError(msg ?? '제출에 실패했습니다.')
       setIsSubmitting(false)
     }
   }
@@ -163,13 +182,33 @@ export default function ArticleWritePage() {
             >
               취소
             </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!isValid || isSubmitting}
-              className="text-xs px-4 py-1.5 bg-accent-primary hover:bg-accent-secondary disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-            >
-              {isSubmitting ? (isEditMode ? '저장 중...' : '발행 중...') : (isEditMode ? '저장' : '발행')}
-            </button>
+            {/* PUBLISHED 글 수정은 임시저장 없이 바로 저장 */}
+            {form.status === 'PUBLISHED' ? (
+              <button
+                onClick={handleSubmit}
+                disabled={!isValid || isSubmitting}
+                className="text-xs px-4 py-1.5 bg-accent-primary hover:bg-accent-secondary disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              >
+                {isSubmitting ? '저장 중...' : '저장'}
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleSave}
+                  disabled={!isValid || isSaving || isSubmitting}
+                  className="text-xs px-3 py-1.5 bg-bg-tertiary hover:bg-bg-elevated disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary rounded-lg transition-colors"
+                >
+                  {isSaving ? '저장 중...' : '임시저장'}
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={!isValid || isSubmitting || isSaving}
+                  className="text-xs px-4 py-1.5 bg-accent-primary hover:bg-accent-secondary disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                >
+                  {isSubmitting ? '제출 중...' : '제출'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
