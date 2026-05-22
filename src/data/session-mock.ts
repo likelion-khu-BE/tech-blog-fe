@@ -139,56 +139,51 @@ export const posts: Post[] = [
 ]
 
 export const sessions: SessionItem[] = [
-  { id: 1, week: 'W1-1', title: 'Spring Boot 환경 세팅 & 프로젝트 구조', content: 'Spring Boot 프로젝트를 처음 생성하는 것부터 시작해 레이어드 아키텍처 구조와 각 레이어의 역할을 살펴봤습니다. 의존성 주입과 Bean 등록 방식도 함께 다뤘습니다.', speaker: '최현우', rating: 4.6, noteCount: 5, resourceCount: 3 },
-  { id: 2, week: 'W1-2', title: 'Git & GitHub 협업 워크플로우', content: 'Git Flow 브랜치 전략과 PR 기반 협업 방식을 실습했습니다. 커밋 컨벤션, 코드 리뷰 에티켓, 충돌 해결 방법까지 실제 팀 프로젝트에서 바로 쓸 수 있는 워크플로우를 다뤘습니다.', speaker: '김다은', rating: 4.4, noteCount: 3, resourceCount: 2 },
-  { id: 3, week: 'W2-1', title: 'JPA 연관관계와 N+1 문제', content: 'OneToMany, ManyToOne 등 JPA 연관관계 매핑을 살펴보고 FetchType에 따른 쿼리 발생 차이를 분석했습니다. N+1 문제의 원인과 Fetch Join, EntityGraph를 이용한 해결 방법을 실습했습니다.', speaker: '이민준', rating: 4.3, noteCount: 4, resourceCount: 3 },
-  { id: 4, week: 'W2-2', title: 'QueryDSL 실전 활용', content: 'JPQL의 한계를 QueryDSL로 극복하는 방법을 다뤘습니다. 동적 쿼리 작성, BooleanExpression 조합, 페이징 처리를 실제 코드로 구현하며 실무 패턴을 익혔습니다.', speaker: '최현우', rating: 4.5, noteCount: 2, resourceCount: 2 },
-  { id: 5, week: 'W3-1', title: '트랜잭션 격리 수준과 Lock 전략', content: 'Dirty Read, Non-Repeatable Read, Phantom Read 등 동시성 이슈를 살펴보고 MySQL InnoDB의 격리 수준별 동작 방식을 비교했습니다. Next-Key Lock을 통한 Phantom Read 방지 메커니즘도 다뤘습니다.', speaker: '김지현', rating: 4.2, noteCount: 3, resourceCount: 2 },
-  { id: 6, week: 'W3-2', title: 'Optimistic Lock vs Pessimistic Lock 실습', content: '낙관적 잠금과 비관적 잠금의 차이를 실습 코드로 비교했습니다. @Version을 이용한 낙관적 잠금 구현과 SELECT FOR UPDATE를 이용한 비관적 잠금의 적절한 사용 시나리오를 분석했습니다.', speaker: '박서윤', rating: 4.8, noteCount: 4, resourceCount: 2 },
-  { id: 7, week: 'W3-3', title: '@Transactional 전파 레벨 딥다이브', content: 'REQUIRED, REQUIRES_NEW, NESTED 등 트랜잭션 전파 레벨의 차이를 코드로 확인했습니다. 전파 레벨 선택이 롤백 범위와 성능에 미치는 영향을 사례별로 분석했습니다.', speaker: '이민준', rating: 4.0, noteCount: 1, resourceCount: 1 },
+  { id: 1, weekLabel: 'W1-1', title: 'Spring Boot 환경 세팅 & 프로젝트 구조', speakers: [{ id: 13, name: '최현우', role: '발표자' }], status: 'DONE', rating: 4.6, noteCount: 5, resourceCount: 3 },
+  { id: 2, weekLabel: 'W1-2', title: 'Git & GitHub 협업 워크플로우', speakers: [{ id: 14, name: '김다은', role: '발표자' }], status: 'DONE', rating: 4.4, noteCount: 3, resourceCount: 2 },
+  { id: 3, weekLabel: 'W2-1', title: 'JPA 연관관계와 N+1 문제', speakers: [{ id: 12, name: '이민준', role: '발표자' }], status: 'DONE', rating: 4.3, noteCount: 4, resourceCount: 3 },
+  { id: 4, weekLabel: 'W2-2', title: 'QueryDSL 실전 활용', speakers: [{ id: 13, name: '최현우', role: '발표자' }], status: 'DONE', rating: 4.5, noteCount: 2, resourceCount: 2 },
+  { id: 5, weekLabel: 'W3-1', title: '트랜잭션 격리 수준과 Lock 전략', speakers: [{ id: 10, name: '김지현', role: '발표자' }], status: 'DONE', rating: 4.2, noteCount: 3, resourceCount: 2 },
+  { id: 6, weekLabel: 'W3-2', title: 'Optimistic Lock vs Pessimistic Lock 실습', speakers: [{ id: 11, name: '박서윤', role: '발표자' }], status: 'DONE', rating: 4.8, noteCount: 4, resourceCount: 2 },
+  { id: 7, weekLabel: 'W3-3', title: '@Transactional 전파 레벨 딥다이브', speakers: [{ id: 12, name: '이민준', role: '발표자' }], status: 'DONE', rating: 4.0, noteCount: 1, resourceCount: 1 },
 ]
 
 export const notes: NoteItem[] = [
   {
     id: 1,
-    author: '김지현',
-    initial: '김지',
-    color: '',
-    date: '2025.05.15',
-    topic: '트랜잭션 격리 수준과 Lock 전략',
+    author: { id: 10, name: '김지현', initial: '김지' },
     body: 'SERIALIZABLE 격리 수준은 성능 오버헤드가 크므로 보통 READ COMMITTED를 기본으로 사용하고, 필요한 구간에만 Lock을 거는 방식이 현실적. Phantom Read를 방지하려면 Range Lock이 필요한데 MySQL InnoDB는 Next-Key Lock으로 이를 구현함.',
-    code: '@Transactional(isolation = Isolation.READ_COMMITTED)\npublic void process() { ... }',
-    codeLang: 'JAVA',
-    links: ['MySQL 공식 문서', 'Baeldung — Transaction Isolation'],
+    links: [
+      { label: 'MySQL 공식 문서', url: 'https://dev.mysql.com/doc/', order: 0 },
+      { label: 'Baeldung — Transaction Isolation', url: 'https://www.baeldung.com/transaction-isolation-levels-jdbc', order: 1 },
+    ],
+    createdAt: '2025-05-15T09:30:00Z',
   },
   {
     id: 2,
-    author: '박서윤',
-    initial: '박서',
-    color: 'bg-[#0F2E1A] text-[#4ADE80]',
-    date: '2025.05.15',
-    topic: 'Optimistic vs Pessimistic Lock 실습',
+    author: { id: 11, name: '박서윤', initial: '박서' },
     body: '낙관적 잠금은 충돌이 드물 때 유리하고, 비관적 잠금은 충돌이 잦을 때 유리함. @Version 어노테이션 필드로 JPA에서 낙관적 잠금을 쉽게 구현할 수 있음.',
-    code: '@Version\nprivate Long version;',
-    codeLang: 'JAVA',
-    links: ['JPA Lock Mode Docs'],
+    links: [
+      { label: 'JPA Lock Mode Docs', url: 'https://jakarta.ee/specifications/persistence/3.1/', order: 0 },
+    ],
+    createdAt: '2025-05-15T09:45:00Z',
   },
 ]
 
 export const resources: ResourceItem[] = [
-  { id: 1, kind: 'SLIDE', name: '3주차_트랜잭션_정리.pdf', author: '김지현', meta: 'W3 · 동시성과 트랜잭션', size: '2.4 MB' },
-  { id: 2, kind: 'CODE', name: 'lock-practice.zip', author: '박서윤', meta: 'W3 · Optimistic Lock 실습', size: '84 KB' },
-  { id: 3, kind: 'LINK', name: 'Baeldung — @Transactional 가이드', author: '이민준', meta: 'W3 · 동시성과 트랜잭션' },
-  { id: 4, kind: 'SLIDE', name: '전파레벨_요약.pdf', author: '이민준', meta: 'W3 · 전파 레벨', size: '1.1 MB' },
-  { id: 5, kind: 'DOCUMENT', name: '데드락_케이스_분석.docx', author: '김지현', meta: 'W3 · 동시성과 트랜잭션', size: '340 KB' },
-  { id: 6, kind: 'SLIDE', name: '2주차_JPA_연관관계.pdf', author: '최현우', meta: 'W2 · JPA 연관관계와 N+1', size: '3.1 MB' },
-  { id: 7, kind: 'LINK', name: 'Hibernate FetchType 완벽 정리', author: '김다은', meta: 'W2 · JPA 연관관계와 N+1' },
+  { id: 1, type: 'SLIDE', name: '3주차_트랜잭션_정리.pdf', uploader: { id: 10, name: '김지현', initial: '김지' }, sizeLabel: '2.4 MB', url: '' },
+  { id: 2, type: 'CODE', name: 'lock-practice.zip', uploader: { id: 11, name: '박서윤', initial: '박서' }, sizeLabel: '84 KB', url: '' },
+  { id: 3, type: 'LINK', name: 'Baeldung — @Transactional 가이드', uploader: { id: 12, name: '이민준', initial: '이민' }, url: 'https://www.baeldung.com/transaction-configuration-with-jpa-and-spring' },
+  { id: 4, type: 'SLIDE', name: '전파레벨_요약.pdf', uploader: { id: 12, name: '이민준', initial: '이민' }, sizeLabel: '1.1 MB', url: '' },
+  { id: 5, type: 'DOCUMENT', name: '데드락_케이스_분석.docx', uploader: { id: 10, name: '김지현', initial: '김지' }, sizeLabel: '340 KB', url: '' },
+  { id: 6, type: 'SLIDE', name: '2주차_JPA_연관관계.pdf', uploader: { id: 13, name: '최현우', initial: '최현' }, sizeLabel: '3.1 MB', url: '' },
+  { id: 7, type: 'LINK', name: 'Hibernate FetchType 완벽 정리', uploader: { id: 14, name: '김다은', initial: '김다' }, url: 'https://www.baeldung.com/hibernate-fetchtype' },
 ]
 
 export const retros: RetroItem[] = [
-  { id: 1, author: '김지현', initial: '김지', color: '', rating: 5, body: '트랜잭션 격리 수준을 이론으로만 알고 있었는데 직접 코드로 실습하니 훨씬 와닿았습니다. 특히 Phantom Read 예시가 인상 깊었어요.' },
-  { id: 2, author: '박서윤', initial: '박서', color: 'bg-[#0F2E1A] text-[#4ADE80]', rating: 4, body: '낙관적 잠금 구현이 생각보다 간단해서 놀랐어요. 다음엔 분산 환경에서의 Lock 전략도 다뤄주시면 좋겠습니다.' },
-  { id: 3, author: '이민준', initial: '이민', color: 'bg-[#2D1F5E] text-[#A78BFA]', rating: 4, body: '전파 레벨 부분이 조금 어려웠지만 실제 코드 덕분에 이해됐습니다. 슬라이드 공유 감사합니다!' },
+  { id: 1, author: { id: 10, name: '김지현', initial: '김지' }, rating: 5, body: '트랜잭션 격리 수준을 이론으로만 알고 있었는데 직접 코드로 실습하니 훨씬 와닿았습니다. 특히 Phantom Read 예시가 인상 깊었어요.' },
+  { id: 2, author: { id: 11, name: '박서윤', initial: '박서' }, rating: 4, body: '낙관적 잠금 구현이 생각보다 간단해서 놀랐어요. 다음엔 분산 환경에서의 Lock 전략도 다뤄주시면 좋겠습니다.' },
+  { id: 3, author: { id: 12, name: '이민준', initial: '이민' }, rating: 4, body: '전파 레벨 부분이 조금 어려웠지만 실제 코드 덕분에 이해됐습니다. 슬라이드 공유 감사합니다!' },
 ]
 
 export const ratingData = [

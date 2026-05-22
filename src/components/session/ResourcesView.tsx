@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { resources } from '../../data/session-mock'
-import type { ResourceKind } from '../../types/session'
+import { useState, useEffect } from 'react'
+import { getSessions, getResources } from '../../api/sessions'
+import type { ApiResource, ResourceType } from '../../api/sessions'
 
-const kindMeta: Record<ResourceKind, { label: string; bg: string; icon: React.ReactNode }> = {
+const kindMeta: Record<ResourceType, { label: string; bg: string; icon: React.ReactNode }> = {
   SLIDE: {
     label: 'SLIDE', bg: 'bg-[#0F1E2E]',
     icon: (
@@ -41,7 +41,7 @@ const kindMeta: Record<ResourceKind, { label: string; bg: string; icon: React.Re
   },
 }
 
-type Filter = ResourceKind | 'all'
+type Filter = ResourceType | 'all'
 const filterOptions: { value: Filter; label: string }[] = [
   { value: 'all', label: '전체' },
   { value: 'SLIDE', label: 'SLIDE' },
@@ -50,17 +50,34 @@ const filterOptions: { value: Filter; label: string }[] = [
   { value: 'DOCUMENT', label: 'DOCUMENT' },
 ]
 
-export function ResourcesView() {
+export function ResourcesView({ generationNumber }: { generationNumber: number }) {
   const [filter, setFilter] = useState<Filter>('all')
+  const [resources, setResources] = useState<ApiResource[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const counts: Record<ResourceKind, number> = {
-    SLIDE: resources.filter(r => r.kind === 'SLIDE').length,
-    CODE: resources.filter(r => r.kind === 'CODE').length,
-    LINK: resources.filter(r => r.kind === 'LINK').length,
-    DOCUMENT: resources.filter(r => r.kind === 'DOCUMENT').length,
+  useEffect(() => {
+    setLoading(true)
+    setError(null)
+
+    getSessions(generationNumber)
+      .then(sessions => {
+        const withResources = sessions.filter(s => s.resourceCount > 0)
+        return Promise.all(withResources.map(s => getResources(generationNumber, s.id)))
+      })
+      .then(nested => setResources(nested.flat()))
+      .catch(() => setError('자료를 불러오지 못했습니다'))
+      .finally(() => setLoading(false))
+  }, [generationNumber])
+
+  const counts: Record<ResourceType, number> = {
+    SLIDE: resources.filter(r => r.type === 'SLIDE').length,
+    CODE: resources.filter(r => r.type === 'CODE').length,
+    LINK: resources.filter(r => r.type === 'LINK').length,
+    DOCUMENT: resources.filter(r => r.type === 'DOCUMENT').length,
   }
 
-  const filtered = filter === 'all' ? resources : resources.filter(r => r.kind === filter)
+  const filtered = filter === 'all' ? resources : resources.filter(r => r.type === filter)
 
   return (
     <div>
@@ -88,49 +105,57 @@ export function ResourcesView() {
 
       {/* 종류별 통계 */}
       <div className="grid grid-cols-4 gap-3 mb-6">
-        {(Object.entries(counts) as [ResourceKind, number][]).map(([kind, count]) => (
+        {(Object.entries(counts) as [ResourceType, number][]).map(([type, count]) => (
           <button
-            key={kind}
-            onClick={() => setFilter(kind)}
+            key={type}
+            onClick={() => setFilter(type)}
             className={`bg-bg-tertiary border rounded-lg p-4 text-left transition-colors ${
-              filter === kind ? 'border-accent-primary/50' : 'border-border-default hover:border-border-hover'
+              filter === type ? 'border-accent-primary/50' : 'border-border-default hover:border-border-hover'
             }`}
           >
             <div className="flex items-center gap-2 mb-2">
-              <div className={`w-6 h-6 rounded flex items-center justify-center ${kindMeta[kind].bg}`}>
-                {kindMeta[kind].icon}
+              <div className={`w-6 h-6 rounded flex items-center justify-center ${kindMeta[type].bg}`}>
+                {kindMeta[type].icon}
               </div>
             </div>
-            <div className="text-[11px] text-text-tertiary mb-1">{kind}</div>
+            <div className="text-[11px] text-text-tertiary mb-1">{type}</div>
             <div className="text-xl font-semibold text-text-primary">{count}</div>
           </button>
         ))}
       </div>
 
       {/* 자료 목록 */}
-      <div className="space-y-2">
-        {filtered.map(r => {
-          const meta = kindMeta[r.kind]
-          return (
-            <div
-              key={r.id}
-              className="flex items-center gap-3 p-3 border border-border-default rounded-lg hover:border-border-hover transition-colors cursor-pointer group"
-            >
-              <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${meta.bg}`}>
-                {meta.icon}
+      {loading ? (
+        <div className="py-16 text-center text-sm text-text-tertiary">불러오는 중...</div>
+      ) : error ? (
+        <div className="py-16 text-center text-sm text-red-400">{error}</div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(r => {
+            const meta = kindMeta[r.type]
+            return (
+              <div
+                key={r.id}
+                className="flex items-center gap-3 p-3 border border-border-default rounded-lg hover:border-border-hover transition-colors cursor-pointer group"
+              >
+                <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${meta.bg}`}>
+                  {meta.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-text-primary truncate">
+                    <a href={r.url} target="_blank" rel="noopener noreferrer" className="hover:underline">{r.name}</a>
+                  </div>
+                  <div className="text-xs text-text-tertiary mt-0.5">{r.uploader.name}</div>
+                </div>
+                {r.sizeLabel && <span className="text-xs text-text-tertiary flex-shrink-0">{r.sizeLabel}</span>}
+                <svg className="w-3.5 h-3.5 text-text-tertiary flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 14 14" fill="none">
+                  <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-text-primary truncate">{r.name}</div>
-                <div className="text-xs text-text-tertiary mt-0.5">{r.meta} · {r.author}</div>
-              </div>
-              {r.size && <span className="text-xs text-text-tertiary flex-shrink-0">{r.size}</span>}
-              <svg className="w-3.5 h-3.5 text-text-tertiary flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 14 14" fill="none">
-                <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

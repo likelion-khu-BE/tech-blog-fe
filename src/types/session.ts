@@ -1,5 +1,5 @@
 export type EventType = 'hackathon' | 'ideathon' | 'workshop' | 'project' | 'meetup'
-export type SessionState = 'draft' | 'open' | 'progress' | 'done' | 'archive'
+export type SessionStatus = 'SCHEDULED' | 'ONGOING' | 'DONE'
 export type BoardView = 'events' | 'sessions' | 'notes' | 'resources' | 'dashboard'
 export type ResourceKind = 'SLIDE' | 'CODE' | 'LINK' | 'DOCUMENT'
 export type ViewMode = 'blog' | 'photo' | 'card'
@@ -33,42 +33,47 @@ export interface Post {
 
 export interface SessionItem {
   id: number
-  week: string
+  weekLabel: string
   title: string
-  content: string
-  speaker: string
+  speakers: { id: number; name: string; role: string }[]
+  status: SessionStatus
   rating: number
   noteCount: number
   resourceCount: number
 }
 
+export interface NoteLink {
+  label: string
+  url: string
+  order: number
+}
+
+export interface NoteAuthor {
+  id: number
+  name: string
+  initial: string
+}
+
 export interface NoteItem {
   id: number
-  author: string
-  initial: string
-  color: string
-  date: string
-  topic: string
+  author: NoteAuthor
   body: string
-  code?: string
-  codeLang?: string
-  links?: string[]
+  links: NoteLink[]
+  createdAt: string
 }
 
 export interface ResourceItem {
   id: number
-  kind: ResourceKind
+  type: ResourceKind
   name: string
-  author: string
-  meta: string
-  size?: string
+  uploader: { id: number; name: string; initial: string }
+  sizeLabel?: string
+  url: string
 }
 
 export interface RetroItem {
   id: number
-  author: string
-  initial: string
-  color: string
+  author: NoteAuthor
   rating: number
   body: string
 }

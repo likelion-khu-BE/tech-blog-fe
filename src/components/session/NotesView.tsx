@@ -7,33 +7,25 @@ function NoteCard({ note }: { note: NoteItem }) {
   return (
     <div className="border border-border-default rounded-lg p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${note.color || defaultColor}`}>
-          {note.initial}
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${defaultColor}`}>
+          {note.author.initial}
         </div>
-        <span className="text-sm font-medium text-text-primary">{note.author}</span>
-        <span className="text-xs text-text-tertiary ml-auto">{note.date}</span>
-      </div>
-      <div className="text-xs text-text-tertiary">
-        <span className="text-text-secondary font-medium">주제:</span> {note.topic}
+        <span className="text-sm font-medium text-text-primary">{note.author.name}</span>
+        <span className="text-xs text-text-tertiary ml-auto">{note.createdAt.slice(0, 10)}</span>
       </div>
       <p className="text-sm text-text-secondary leading-relaxed">{note.body}</p>
-      {note.code && (
-        <div className="bg-bg-tertiary rounded-md p-3">
-          {note.codeLang && (
-            <div className="text-[10px] text-text-tertiary uppercase tracking-widest mb-1.5 font-mono">{note.codeLang}</div>
-          )}
-          <pre className="text-xs font-mono text-text-primary whitespace-pre-wrap">{note.code}</pre>
-        </div>
-      )}
       {note.links && note.links.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {note.links.map(link => (
-            <span
-              key={link}
+            <a
+              key={link.order}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-[11px] px-2.5 py-1 rounded-md bg-accent-muted border border-accent-primary/30 text-accent-secondary cursor-pointer hover:bg-accent-muted/80 transition-colors"
             >
-              {link}
-            </span>
+              {link.label}
+            </a>
           ))}
         </div>
       )}
@@ -46,9 +38,8 @@ export function NotesView() {
 
   const filtered = notes.filter(n =>
     search === '' ||
-    n.topic.toLowerCase().includes(search.toLowerCase()) ||
     n.body.toLowerCase().includes(search.toLowerCase()) ||
-    n.author.toLowerCase().includes(search.toLowerCase())
+    n.author.name.toLowerCase().includes(search.toLowerCase())
   )
 
   return (

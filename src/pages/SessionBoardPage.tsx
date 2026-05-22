@@ -63,8 +63,8 @@ export default function SessionBoardPage() {
 
         <div className="pb-20">
           {activeTab === 'events' && <EventsView />}
-          {activeTab === 'sessions' && <SessionsView />}
-          {activeTab === 'resources' && <ResourcesView />}
+          {activeTab === 'sessions' && <SessionsView generationNumber={cohort} />}
+          {activeTab === 'resources' && <ResourcesView generationNumber={cohort} />}
         </div>
       </div>
     </main>
