@@ -1,5 +1,5 @@
 import client from './client'
-import type { Post, PostPage, PostCreateRequest, PostUpdateRequest } from '../types/post'
+import type { Post, PostPage, PostCreateRequest, PostUpdateRequest, PostStatus } from '../types/post'
 
 export interface PostListParams {
   board?: string
@@ -7,6 +7,12 @@ export interface PostListParams {
   generation?: string
   authorId?: number
   keyword?: string
+  page?: number
+  size?: number
+}
+
+export interface MyPostListParams {
+  status?: PostStatus
   page?: number
   size?: number
 }
@@ -38,4 +44,19 @@ export async function deletePost(id: number): Promise<void> {
 export async function toggleBookmark(id: number): Promise<boolean> {
   const { data } = await client.post<{ bookmarked: boolean }>(`/api/blog/posts/${id}/bookmark`)
   return data.bookmarked
+}
+
+export async function submitPost(id: number): Promise<Post> {
+  const { data } = await client.post<Post>(`/api/blog/posts/${id}/submit`)
+  return data
+}
+
+export async function getMyPosts(params?: MyPostListParams): Promise<PostPage> {
+  const { data } = await client.get<PostPage>('/api/blog/posts/me', { params })
+  return data
+}
+
+export async function getMyBookmarks(params?: { page?: number; size?: number }): Promise<PostPage> {
+  const { data } = await client.get<PostPage>('/api/blog/posts/bookmarks', { params })
+  return data
 }
