@@ -81,7 +81,7 @@ export default function ArticleDetailPage() {
     )
   }
 
-  const canEdit = isAuthenticated && userId === post.authorId
+  const canEdit = isAuthenticated && (userId === post.authorId || role === 'ADMIN')
   const canDelete = isAuthenticated && (userId === post.authorId || role === 'ADMIN')
 
   async function handleBookmark() {
