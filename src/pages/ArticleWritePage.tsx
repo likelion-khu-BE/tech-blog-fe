@@ -3,7 +3,9 @@ import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { usePageTransition } from '../hooks/usePageTransition'
+import { useAuth } from '../contexts/AuthContext'
 import { createPost, updatePost, getPost, submitPost } from '../api/posts'
+import { publishPost } from '../api/admin'
 import { BOARDS, CATEGORIES } from '../types/post'
 import type { PostStatus } from '../types/post'
 
@@ -29,6 +31,8 @@ const DEFAULT_FORM: FormState = {
 
 export default function ArticleWritePage() {
   const visible = usePageTransition()
+  const { role } = useAuth()
+  const isAdmin = role === 'ADMIN'
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
   const [searchParams] = useSearchParams()
@@ -144,6 +148,30 @@ export default function ArticleWritePage() {
     }
   }
 
+  // 어드민 작성: 저장 후 즉시 PUBLISHED로 발행
+  async function handlePublish() {
+    if (!isValid || isSubmitting) return
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      if (isEditMode && id) {
+        const updated = await updatePost(Number(id), buildBody())
+        if (updated.status !== 'PUBLISHED') {
+          await publishPost(updated.id)
+        }
+        navigate(`/articles/${updated.id}`, { replace: true })
+      } else {
+        const created = await createPost({ ...buildBody(), replyToId: replyToId ?? undefined })
+        await publishPost(created.id)
+        navigate(`/articles/${created.id}`, { replace: true })
+      }
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setError(msg ?? '작성에 실패했습니다.')
+      setIsSubmitting(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <main className="max-w-[700px] mx-auto px-4 md:px-5 pt-14">
@@ -185,7 +213,7 @@ export default function ArticleWritePage() {
             {/* PUBLISHED 글 수정은 임시저장 없이 바로 저장 */}
             {form.status === 'PUBLISHED' ? (
               <button
-                onClick={handleSubmit}
+                onClick={isAdmin ? handlePublish : handleSubmit}
                 disabled={!isValid || isSubmitting}
                 className="text-xs px-4 py-1.5 bg-accent-primary hover:bg-accent-secondary disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
               >
@@ -201,11 +229,13 @@ export default function ArticleWritePage() {
                   {isSaving ? '저장 중...' : '임시저장'}
                 </button>
                 <button
-                  onClick={handleSubmit}
+                  onClick={isAdmin ? handlePublish : handleSubmit}
                   disabled={!isValid || isSubmitting || isSaving}
                   className="text-xs px-4 py-1.5 bg-accent-primary hover:bg-accent-secondary disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
                 >
-                  {isSubmitting ? '제출 중...' : '제출'}
+                  {isSubmitting
+                    ? (isAdmin ? '작성 중...' : '제출 중...')
+                    : (isAdmin ? '작성' : '제출')}
                 </button>
               </>
             )}
