@@ -11,11 +11,19 @@ import { loginAs } from './helpers'
 
 async function getFirstArticleId(page: Page): Promise<number | null> {
   await page.goto('/articles')
-  const link = page.locator('main a[href]').filter({ hasText: /.+/ }).first()
-  await expect(link).toBeVisible({ timeout: 8_000 })
-  const href = await link.getAttribute('href')
-  const match = href?.match(/\/articles\/(\d+)/)
-  return match ? Number(match[1]) : null
+  const links = page.locator('main a[href^="/articles/"]')
+  try {
+    await expect(links.first()).toBeVisible({ timeout: 8_000 })
+  } catch {
+    return null
+  }
+  const count = await links.count()
+  for (let i = 0; i < count; i++) {
+    const href  = await links.nth(i).getAttribute('href')
+    const match = href?.match(/^\/articles\/(\d+)$/)
+    if (match) return Number(match[1])
+  }
+  return null
 }
 
 // SPA 클릭 내비게이션으로 첫 번째 게시글 상세 페이지로 이동 (in-memory 토큰 보존)
@@ -24,17 +32,22 @@ async function navigateToFirstArticle(page: Page): Promise<boolean> {
   await page.getByRole('link', { name: '아티클' }).click()
   await page.waitForURL(/\/articles/, { timeout: 8_000 })
 
-  const link = page.locator('main a[href]').filter({ hasText: /.+/ }).first()
+  const links = page.locator('main a[href^="/articles/"]')
   try {
-    await expect(link).toBeVisible({ timeout: 8_000 })
+    await expect(links.first()).toBeVisible({ timeout: 8_000 })
   } catch {
     return false
   }
-  const href = await link.getAttribute('href')
-  if (!href?.match(/\/articles\/\d+/)) return false
-  await link.click()
-  await page.waitForURL(/\/articles\/\d+/, { timeout: 8_000 })
-  return true
+  const count = await links.count()
+  for (let i = 0; i < count; i++) {
+    const href  = await links.nth(i).getAttribute('href')
+    if (href?.match(/^\/articles\/(\d+)$/)) {
+      await links.nth(i).click()
+      await page.waitForURL(/\/articles\/\d+/, { timeout: 8_000 })
+      return true
+    }
+  }
+  return false
 }
 
 // ─────────────────────────────────────────────────────────────
