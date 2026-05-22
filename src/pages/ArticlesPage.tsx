@@ -59,12 +59,14 @@ export default function ArticlesPage() {
         size: PAGE_SIZE,
       })
       if (seq !== requestSeq.current) return
+      if (!append) setIsLoading(false)
       setPosts(prev => append ? [...prev, ...data.content] : data.content)
       setTotalElements(data.totalElements)
       setIsLast(data.last)
       setPage(nextPage)
     } catch {
       if (seq !== requestSeq.current) return
+      if (!append) setIsLoading(false)
       setError('게시글을 불러오지 못했습니다.')
     }
   }, [])
@@ -73,7 +75,6 @@ export default function ArticlesPage() {
     setIsLoading(true)
     setError(null)
     fetchPosts({ board, generation, authorId, keyword: debouncedKeyword }, 0, false)
-      .finally(() => setIsLoading(false))
   }, [board, generation, authorId, debouncedKeyword, fetchPosts])
 
   async function handleLoadMore() {
