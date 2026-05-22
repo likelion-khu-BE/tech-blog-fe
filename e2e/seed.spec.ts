@@ -1,7 +1,8 @@
 /**
  * 수동 테스트용 시드 데이터 삽입.
- * API를 직접 호출하므로 브라우저 불필요.
+ * playwright.config.ts 기본 실행에서 제외됨 (testIgnore).
  * 실행: npx playwright test e2e/seed.spec.ts --reporter=line
+ * 크리덴셜 오버라이드: E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD, E2E_MEMBER_EMAIL, E2E_MEMBER_PASSWORD
  */
 
 import { test } from '@playwright/test'
@@ -25,7 +26,9 @@ async function apiLogin(
   const res = await request.post(`${API}/api/auth/login`, {
     data: { email, password },
   })
+  if (!res.ok()) throw new Error(`Login failed (${res.status()}): ${await res.text()}`)
   const body = await res.json()
+  if (!body?.accessToken) throw new Error('Login response missing accessToken')
   return body.accessToken as string
 }
 
@@ -38,6 +41,7 @@ async function createPost(
     data: payload,
     headers: { Authorization: `Bearer ${token}` },
   })
+  if (!res.ok()) throw new Error(`Create post failed (${res.status()}): ${await res.text()}`)
   const body = await res.json()
   console.log(`  [${payload.status}] ${payload.board} / ${payload.category} / "${payload.title}" → id=${body.id}`)
 }
@@ -148,9 +152,14 @@ const MEMBER_POSTS: PostPayload[] = [
 
 // ─── 테스트 ──────────────────────────────────────────────────────
 
+const ADMIN_EMAIL    = process.env.E2E_ADMIN_EMAIL    ?? 'admin_test@khu.ac.kr'
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'password123'
+const MEMBER_EMAIL   = process.env.E2E_MEMBER_EMAIL   ?? 'member_test@khu.ac.kr'
+const MEMBER_PASSWORD = process.env.E2E_MEMBER_PASSWORD ?? 'password123'
+
 test('어드민 계정 게시글 6개 삽입', async ({ request }) => {
-  console.log('\n[ADMIN] admin_test@khu.ac.kr 로그인...')
-  const token = await apiLogin(request, 'admin_test@khu.ac.kr', 'password123')
+  console.log(`\n[ADMIN] ${ADMIN_EMAIL} 로그인...`)
+  const token = await apiLogin(request, ADMIN_EMAIL, ADMIN_PASSWORD)
 
   for (const post of ADMIN_POSTS) {
     await createPost(request, token, post)
@@ -158,8 +167,8 @@ test('어드민 계정 게시글 6개 삽입', async ({ request }) => {
 })
 
 test('멤버 계정 게시글 6개 삽입', async ({ request }) => {
-  console.log('\n[MEMBER] member_test@khu.ac.kr 로그인...')
-  const token = await apiLogin(request, 'member_test@khu.ac.kr', 'password123')
+  console.log(`\n[MEMBER] ${MEMBER_EMAIL} 로그인...`)
+  const token = await apiLogin(request, MEMBER_EMAIL, MEMBER_PASSWORD)
 
   for (const post of MEMBER_POSTS) {
     await createPost(request, token, post)

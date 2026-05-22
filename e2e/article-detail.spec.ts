@@ -6,18 +6,27 @@ import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { loginAs } from './helpers'
 
-// 비로그인 상태에서 첫 게시글 ID 반환 (page.goto 사용 가능)
-async function getFirstArticleId(page: Page): Promise<number | null> {
-  await page.goto('/articles')
-  const link = page.locator('main a[href]').filter({ hasText: /.+/ }).first()
+// 아티클 상세 링크(/articles/:id) 중 첫 번째를 찾아 id 반환
+async function findFirstArticleId(page: Page): Promise<number | null> {
+  const links = page.locator('main a[href^="/articles/"]')
   try {
-    await expect(link).toBeVisible({ timeout: 8_000 })
+    await expect(links.first()).toBeVisible({ timeout: 8_000 })
   } catch {
     return null
   }
-  const href = await link.getAttribute('href')
-  const match = href?.match(/\/articles\/(\d+)/)
-  return match ? Number(match[1]) : null
+  const count = await links.count()
+  for (let i = 0; i < count; i++) {
+    const href  = await links.nth(i).getAttribute('href')
+    const match = href?.match(/^\/articles\/(\d+)$/)
+    if (match) return Number(match[1])
+  }
+  return null
+}
+
+// 비로그인 상태에서 첫 게시글 ID 반환 (page.goto 사용 가능)
+async function getFirstArticleId(page: Page): Promise<number | null> {
+  await page.goto('/articles')
+  return findFirstArticleId(page)
 }
 
 // 로그인 후 SPA 클릭 내비게이션으로 첫 게시글 상세 페이지 이동 (in-memory 토큰 보존)
@@ -26,19 +35,23 @@ async function navigateToFirstArticleSpa(page: Page): Promise<number | null> {
   await page.getByRole('link', { name: '아티클' }).click()
   await page.waitForURL(/\/articles/, { timeout: 8_000 })
 
-  const link = page.locator('main a[href]').filter({ hasText: /.+/ }).first()
+  const links = page.locator('main a[href^="/articles/"]')
   try {
-    await expect(link).toBeVisible({ timeout: 8_000 })
+    await expect(links.first()).toBeVisible({ timeout: 8_000 })
   } catch {
     return null
   }
-  const href = await link.getAttribute('href')
-  const match = href?.match(/\/articles\/(\d+)/)
-  if (!match) return null
-  const postId = Number(match[1])
-  await link.click()
-  await page.waitForURL(/\/articles\/\d+/, { timeout: 8_000 })
-  return postId
+  const count = await links.count()
+  for (let i = 0; i < count; i++) {
+    const href  = await links.nth(i).getAttribute('href')
+    const match = href?.match(/^\/articles\/(\d+)$/)
+    if (match) {
+      await links.nth(i).click()
+      await page.waitForURL(/\/articles\/\d+/, { timeout: 8_000 })
+      return Number(match[1])
+    }
+  }
+  return null
 }
 
 test.describe('ArticleDetailPage — #5 답글 버튼 역할별 표시', () => {

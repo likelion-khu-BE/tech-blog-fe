@@ -70,13 +70,13 @@ test.describe('ArticlesPage — #6 작성자 필터', () => {
   test('게시글 목록에서 글 클릭 → 상세 → 작성자 클릭 시 작성자 필터 배지가 표시된다', async ({ page }) => {
     await page.goto('/articles')
 
-    const firstArticle = page.locator('main a[href]').filter({ hasText: /.+/ }).first()
-    try {
-      await expect(firstArticle).toBeVisible({ timeout: 8_000 })
-    } catch {
+    const articles = page.locator('main a[href^="/articles/"]')
+    if ((await articles.count()) === 0) {
       test.skip(true, 'DB에 게시글이 없습니다')
       return
     }
+    const firstArticle = articles.first()
+    await expect(firstArticle).toBeVisible({ timeout: 8_000 })
 
     await firstArticle.click()
     await page.waitForURL(/\/articles\/\d+/)
@@ -97,13 +97,13 @@ test.describe('ArticlesPage — #6 작성자 필터', () => {
   test('작성자 필터 배지 X 클릭 시 필터가 해제된다', async ({ page }) => {
     await page.goto('/articles')
 
-    const firstArticle = page.locator('main a[href]').filter({ hasText: /.+/ }).first()
-    try {
-      await expect(firstArticle).toBeVisible({ timeout: 8_000 })
-    } catch {
+    const articles = page.locator('main a[href^="/articles/"]')
+    if ((await articles.count()) === 0) {
       test.skip(true, 'DB에 게시글이 없습니다')
       return
     }
+    const firstArticle = articles.first()
+    await expect(firstArticle).toBeVisible({ timeout: 8_000 })
 
     await firstArticle.click()
     await page.waitForURL(/\/articles\/\d+/)

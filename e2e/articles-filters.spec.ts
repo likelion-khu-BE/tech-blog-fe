@@ -18,6 +18,7 @@ type ReqCtx = Awaited<ReturnType<typeof pwRequest.newContext>>
 
 async function apiLogin(ctx: ReqCtx, creds: typeof ADMIN) {
   const res  = await ctx.post(`${API}/api/auth/login`, { data: creds })
+  if (!res.ok()) throw new Error(`Login failed (${res.status()}): ${await res.text()}`)
   const body = await res.json()
   return body.accessToken as string
 }
@@ -31,14 +32,16 @@ async function apiCreate(
     data: { ...payload, status: 'DRAFT' },
     headers: { Authorization: `Bearer ${authorToken}` },
   })
+  if (!res.ok()) throw new Error(`Create post failed (${res.status()}): ${await res.text()}`)
   const body = await res.json()
   const id   = body.id as number
 
   if (payload.status === 'PUBLISHED') {
-    await ctx.patch(`${API}/api/blog/admin/posts/${id}/status`, {
+    const publishRes = await ctx.patch(`${API}/api/blog/admin/posts/${id}/status`, {
       data: { status: 'PUBLISHED' },
       headers: { Authorization: `Bearer ${adminToken}` },
     })
+    if (!publishRes.ok()) throw new Error(`Publish post failed (${publishRes.status()}): ${await publishRes.text()}`)
   }
 
   return id
@@ -320,10 +323,14 @@ test.describe('아티클 필터 E2E', () => {
 
   test('/articles 진입 시 스피너 중 빈 상태 메시지가 동시에 노출되지 않는다', async ({ page }) => {
     await page.goto('/articles')
-    try {
-      await expect(page.locator('.animate-spin')).toBeVisible({ timeout: 500 })
-      expect(await page.locator('text=아티클이 아직 없습니다').isVisible()).toBe(false)
-    } catch { /* 로딩이 너무 빠른 환경 — 통과 */ }
+    // 로딩이 너무 빠르면 스피너가 안 보일 수 있으므로 spinner 대기만 허용
+    const spinnerAppeared = await expect(page.locator('.animate-spin'))
+      .toBeVisible({ timeout: 500 })
+      .then(() => true)
+      .catch(() => false)
+    if (spinnerAppeared) {
+      await expect(page.locator('text=아티클이 아직 없습니다')).not.toBeVisible()
+    }
     await waitForArticles(page)
   })
 })
