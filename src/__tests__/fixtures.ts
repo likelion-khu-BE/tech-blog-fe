@@ -106,6 +106,8 @@ export const MOCK_STATS: AdminStats = {
   totalPosts: 42,
   publishedPosts: 35,
   draftPosts: 7,
+  pendingReviewPosts: 0,
+  rejectedPosts: 0,
   totalComments: 128,
 }
 
