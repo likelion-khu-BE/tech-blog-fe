@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: './e2e',
   testIgnore: ['**/seed.spec.ts'],
   fullyParallel: false,
-  workers: 1,
+  workers: 5,
   retries: 0,
   timeout: 20_000,
 
