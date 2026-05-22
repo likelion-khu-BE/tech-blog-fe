@@ -1,97 +1,143 @@
 /**
- * 게시글 작성/수정 페이지 E2E 테스트
+ * 아티클 작성/제출 워크플로우 E2E 테스트
  *
- * 실제 DB에 게시글이 생성될 수 있음 (status=DRAFT).
- * 어드민 관리자 페이지에서 정리 가능.
+ * 검토 워크플로우: DRAFT → (제출) → PENDING_REVIEW → (어드민 발행) → PUBLISHED
+ *                                                  → (어드민 거부) → REJECTED
  */
 
 import { test, expect } from '@playwright/test'
-import type { Page } from '@playwright/test'
-import { loginAs } from './helpers'
+import { loginAs, gotoAndWaitForAuth } from './helpers'
 
-// 로그인 후 "글쓰기" 링크 클릭으로 SPA 이동 (in-memory 토큰 보존)
-async function goToWritePage(page: Page) {
+// ── 공통 헬퍼 ────────────────────────────────────────────────
+
+async function fillWriteForm(
+  page: import('@playwright/test').Page,
+  opts: { title?: string; category?: string; content?: string } = {}
+) {
+  const title = opts.title ?? `E2E 테스트 글 ${Date.now()}`
+  const category = opts.category ?? 'Spring Boot'
+  const content = opts.content ?? '테스트 본문 내용입니다.'
+
+  await page.getByPlaceholder('제목을 입력하세요').fill(title)
+  await page.getByRole('button', { name: category }).click()
+  await page.getByPlaceholder(/마크다운으로 작성하세요/).fill(content)
+
+  return { title, category, content }
+}
+
+async function goToWritePage(page: import('@playwright/test').Page) {
   await page.getByRole('link', { name: '글쓰기' }).click()
   await expect(page.getByPlaceholder('제목을 입력하세요')).toBeVisible({ timeout: 8_000 })
 }
 
-// ─────────────────────────────────────────────────────────────
-test.describe('ArticleWritePage — 접근 제어', () => {
-  test('[비로그인] /articles/write 접근 시 로그인 페이지로 리다이렉트된다', async ({ page }) => {
+// ── 접근 제어 ─────────────────────────────────────────────────
+
+test.describe('아티클 작성 — 접근 제어', () => {
+  test('[비로그인] /articles/write 접근 시 /login으로 리다이렉트된다', async ({ page }) => {
     await page.goto('/articles/write')
     await expect(page).toHaveURL(/\/login/, { timeout: 5_000 })
   })
 
-  test('[멤버] /articles/write에 접근할 수 있다', async ({ page }) => {
+  test('[멤버] /articles/write에 접근된다', async ({ page }) => {
     await loginAs(page, 'member')
     await goToWritePage(page)
+    await expect(page.getByText('임시저장')).toBeVisible()
+    await expect(page.getByText('제출')).toBeVisible()
+  })
+
+  test('[어드민] /articles/write에 접근된다', async ({ page }) => {
+    await loginAs(page, 'admin')
+    await goToWritePage(page)
+    await expect(page.getByText('임시저장')).toBeVisible()
   })
 })
 
-// ─────────────────────────────────────────────────────────────
-test.describe('ArticleWritePage — 유효성', () => {
-  test('빈 폼에서 발행 버튼이 비활성화된다', async ({ page }) => {
+// ── 버튼 활성화 조건 ──────────────────────────────────────────
+
+test.describe('아티클 작성 — 버튼 활성화 조건', () => {
+  test('제목·카테고리·내용 미입력 시 버튼이 비활성화된다', async ({ page }) => {
     await loginAs(page, 'member')
     await goToWritePage(page)
-    await expect(page.getByRole('button', { name: '발행' })).toBeDisabled({ timeout: 5_000 })
+
+    await expect(page.getByRole('button', { name: '제출' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: '임시저장' })).toBeDisabled()
   })
 
-  test('제목만 입력하면 발행 버튼이 여전히 비활성화된다', async ({ page }) => {
+  test('제목·카테고리·내용 모두 입력 시 버튼이 활성화된다', async ({ page }) => {
     await loginAs(page, 'member')
     await goToWritePage(page)
-    await page.fill('[placeholder="제목을 입력하세요"]', '제목만 입력')
-    await expect(page.getByRole('button', { name: '발행' })).toBeDisabled()
+
+    await fillWriteForm(page)
+
+    await expect(page.getByRole('button', { name: '제출' })).not.toBeDisabled({ timeout: 3_000 })
+    await expect(page.getByRole('button', { name: '임시저장' })).not.toBeDisabled()
   })
 })
 
-// ─────────────────────────────────────────────────────────────
-test.describe('ArticleWritePage — 게시글 작성', () => {
-  test('[멤버] 제목·내용·카테고리 입력 후 발행하면 상세 페이지로 이동한다', async ({ page }) => {
+// ── 임시저장 (DRAFT) ──────────────────────────────────────────
+
+test.describe('아티클 작성 — 임시저장', () => {
+  test('임시저장 클릭 시 게시글 상세 페이지로 이동한다', async ({ page }) => {
     await loginAs(page, 'member')
     await goToWritePage(page)
 
-    await page.fill('[placeholder="제목을 입력하세요"]', 'E2E 테스트 게시글')
-    await page.fill('[placeholder^="마크다운으로 작성하세요"]', '## 본문\n\nE2E 테스트 내용입니다.')
-    await page.getByRole('button', { name: 'Testing' }).click()
+    const { title } = await fillWriteForm(page)
+    await page.getByRole('button', { name: '임시저장' }).click()
 
-    await page.getByRole('button', { name: '발행' }).click()
+    // 게시글 상세 페이지 /articles/{id} 로 이동
     await expect(page).toHaveURL(/\/articles\/\d+/, { timeout: 10_000 })
-  })
-
-  test('[멤버] 태그를 입력하고 발행할 수 있다', async ({ page }) => {
-    await loginAs(page, 'member')
-    await goToWritePage(page)
-
-    await page.fill('[placeholder="제목을 입력하세요"]', 'E2E 태그 테스트')
-    await page.fill('[placeholder^="마크다운으로 작성하세요"]', '태그 테스트 내용')
-    await page.getByRole('button', { name: 'Testing' }).click()
-
-    const tagInput = page.getByPlaceholder('태그 입력 후 Enter (선택)')
-    await tagInput.fill('E2E')
-    await tagInput.press('Enter')
-    await expect(page.getByText('E2E')).toBeVisible()
-
-    await page.getByRole('button', { name: '발행' }).click()
-    await expect(page).toHaveURL(/\/articles\/\d+/, { timeout: 10_000 })
+    // 내 글 목록이나 상세에서 제목 확인
+    await expect(page.locator('h1').first()).toContainText(title, { timeout: 8_000 })
   })
 })
 
-// ─────────────────────────────────────────────────────────────
-test.describe('ArticleWritePage — 답글 모드', () => {
-  test('[멤버] 상세 페이지에서 "답글 작성" 클릭 시 원글 배너가 표시된다', async ({ page }) => {
+// ── 검토 제출 (PENDING_REVIEW) ────────────────────────────────
+
+test.describe('아티클 작성 — 검토 제출', () => {
+  test('제출 클릭 시 게시글 상세 페이지로 이동한다', async ({ page }) => {
+    await loginAs(page, 'member')
+    await goToWritePage(page)
+
+    const { title } = await fillWriteForm(page)
+    await page.getByRole('button', { name: '제출' }).click()
+
+    await expect(page).toHaveURL(/\/articles\/\d+/, { timeout: 10_000 })
+    await expect(page.locator('h1').first()).toContainText(title, { timeout: 8_000 })
+  })
+})
+
+// ── 답글 작성 ────────────────────────────────────────────────
+
+test.describe('아티클 작성 — 답글 작성 (#5)', () => {
+  test('[멤버] 상세 페이지에서 답글 작성 버튼 클릭 시 원글 배너가 표시된다', async ({ page }) => {
     await loginAs(page, 'member')
 
-    // SPA 내비게이션으로 토큰 유지
-    await page.getByRole('link', { name: '아티클' }).click()
-    await page.waitForURL(/\/articles/, { timeout: 8_000 })
+    const res = await page.request.get('/api/blog/posts?size=1')
+    const data = await res.json()
+    const postId = (data.content as { id: number }[])[0]?.id
 
-    const firstArticle = page.locator('main a[href]').filter({ hasText: /.+/ }).first()
-    await expect(firstArticle, 'DB에 게시글이 없습니다').toBeVisible({ timeout: 8_000 })
-    await firstArticle.click()
-    await page.waitForURL(/\/articles\/\d+/)
+    await gotoAndWaitForAuth(page, `/articles/${postId}`)
+    await expect(page.locator('h1').first()).toBeVisible({ timeout: 8_000 })
 
     await page.getByRole('button', { name: '답글 작성' }).click()
-    await expect(page).toHaveURL(/\/articles\/write\?replyTo=\d+/)
+    await expect(page).toHaveURL(new RegExp(`/articles/write\\?replyTo=${postId}`))
     await expect(page.locator('text=원글:')).toBeVisible({ timeout: 8_000 })
+  })
+})
+
+// ── 어드민 워크플로우 ─────────────────────────────────────────
+
+test.describe('어드민 — 검토 대기 → 발행/거부', () => {
+  test('[어드민] 아티클 관리 탭에서 PENDING_REVIEW 목록이 로드된다', async ({ page }) => {
+    await loginAs(page, 'admin')
+    await page.getByRole('link', { name: '관리자' }).click()
+    await page.waitForURL('**/admin', { timeout: 8_000 })
+
+    await page.getByRole('button', { name: '아티클 관리' }).click()
+
+    // 검토 대기 탭이 기본 선택
+    await expect(page.getByRole('button', { name: '검토 대기' }).first()).toBeVisible()
+    // 오류 없이 로드
+    await expect(page.locator('text=오류')).not.toBeVisible()
   })
 })
