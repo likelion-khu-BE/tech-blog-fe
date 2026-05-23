@@ -7,7 +7,7 @@
 
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import { loginAs } from './helpers'
+import { loginAs, gotoAndWaitForAuth } from './helpers'
 
 async function getFirstArticleId(page: Page): Promise<number | null> {
   await page.goto('/articles')
@@ -116,18 +116,35 @@ test.describe('CommentSection — 멤버', () => {
 test.describe('CommentSection — 대댓글', () => {
   test('[멤버] 댓글에 답글 버튼이 표시되고 답글 폼이 열린다', async ({ page }) => {
     await loginAs(page, 'member')
-    const found = await navigateToFirstArticle(page)
-    expect(found, 'DB에 게시글이 없습니다').toBe(true)
 
-    await expect(page.getByPlaceholder('댓글을 작성하세요')).toBeVisible({ timeout: 8_000 })
+    // 댓글이 있는 게시글 API로 탐색
+    const postsRes = await page.request.get('/api/blog/posts?size=20')
+    expect(postsRes.ok()).toBeTruthy()
+    const postsData = await postsRes.json()
+    const posts = postsData.content as { id: number }[]
 
-    // 댓글이 있어야 답글 버튼이 존재 (exact: true로 "답글 작성" 버튼과 구분)
-    const replyBtn = page.getByRole('button', { name: '답글', exact: true }).first()
-    if (!(await replyBtn.isVisible())) {
-      test.skip(true, '댓글이 없어 답글 테스트 불가')
+    let targetId: number | null = null
+    for (const post of posts) {
+      const cr = await page.request.get(`/api/blog/posts/${post.id}/comments`)
+      if (cr.ok()) {
+        const comments = await cr.json()
+        if (Array.isArray(comments) && comments.length > 0) {
+          targetId = post.id
+          break
+        }
+      }
+    }
+    if (!targetId) {
+      test.skip(true, '댓글이 있는 게시글 없음')
       return
     }
 
+    await gotoAndWaitForAuth(page, `/articles/${targetId}`)
+    await expect(page.locator('h1').first()).toBeVisible({ timeout: 8_000 })
+    await expect(page.getByPlaceholder('댓글을 작성하세요')).toBeVisible({ timeout: 8_000 })
+
+    const replyBtn = page.getByRole('button', { name: '답글', exact: true }).first()
+    await expect(replyBtn).toBeVisible({ timeout: 5_000 })
     await replyBtn.click()
     await expect(page.getByPlaceholder('답글을 작성하세요')).toBeVisible({ timeout: 3_000 })
   })

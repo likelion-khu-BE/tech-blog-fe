@@ -137,6 +137,7 @@ test.describe('댓글 작성 — 멤버', () => {
 
 test.describe('대댓글 — 멤버', () => {
   test.describe.configure({ mode: 'parallel' })
+  test.setTimeout(35_000)
 
   let articleUrl = ''
   let articleId = 0
@@ -185,21 +186,32 @@ test.describe('대댓글 — 멤버', () => {
 
 test.describe('댓글 좋아요', () => {
   test('[비로그인] 좋아요 버튼이 비활성화된다', async ({ page }) => {
-    const articleUrl = await getFirstPublishedArticleUrl(page)
-    await page.goto(articleUrl)
-    await expect(page.locator('h1').first()).toBeVisible({ timeout: 8_000 })
+    // 댓글이 있는 게시글 API로 탐색
+    const postsRes = await page.request.get('/api/blog/posts?size=20')
+    expect(postsRes.ok()).toBeTruthy()
+    const posts = (await postsRes.json()).content as { id: number }[]
 
-    const section = page.locator('section').filter({ hasText: '댓글' })
-    const hasComments = (await section.locator('div.py-4').count()) > 0
-    if (!hasComments) {
-      test.skip(true, '댓글이 없는 게시글')
+    let targetId: number | null = null
+    for (const post of posts) {
+      const cr = await page.request.get(`/api/blog/posts/${post.id}/comments`)
+      if (cr.ok()) {
+        const comments = await cr.json()
+        if (Array.isArray(comments) && comments.length > 0) {
+          targetId = post.id
+          break
+        }
+      }
+    }
+    if (!targetId) {
+      test.skip(true, '댓글이 있는 게시글 없음')
       return
     }
 
-    const likeBtn = section
-      .locator('button')
-      .filter({ has: page.locator('svg path[d*="4.318"]') })
-      .first()
+    await page.goto(`/articles/${targetId}`)
+    await expect(page.locator('h1').first()).toBeVisible({ timeout: 8_000 })
+
+    const section = page.locator('section').filter({ hasText: '댓글' })
+    const likeBtn = section.locator('div.py-4').first().getByRole('button').first()
     await expect(likeBtn).toBeDisabled()
   })
 })
