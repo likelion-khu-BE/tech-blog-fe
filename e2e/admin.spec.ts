@@ -15,10 +15,10 @@ async function goToAdmin(page: import('@playwright/test').Page) {
 }
 
 test.describe('AdminPage — #4 통계 카드', () => {
-  test('[어드민] 통계 카드 4개가 렌더링되고 숫자가 표시된다', async ({ page }) => {
+  test('[어드민] 통계 카드 5개가 렌더링되고 숫자가 표시된다', async ({ page }) => {
     await goToAdmin(page)
 
-    const STAT_LABELS = ['전체 게시글', '게시된 글', '초안', '총 댓글']
+    const STAT_LABELS = ['전체 게시글', '검토 대기', '게시된 글', '거부됨', '총 댓글']
     for (const label of STAT_LABELS) {
       const valueEl = page.locator('p', { hasText: label })
         .locator('xpath=following-sibling::p[contains(@class,"text-2xl")]')
