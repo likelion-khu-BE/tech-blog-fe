@@ -11,7 +11,11 @@ import { loginAs, gotoAndWaitForAuth } from './helpers'
 async function getFirstPublishedArticleUrl(page: import('@playwright/test').Page) {
   const res = await page.request.get('/api/blog/posts?size=1')
   const data = await res.json()
-  return `/articles/${(data.content as { id: number }[])[0].id}`
+  const content = data.content as { id: number }[]
+  if (!content || content.length === 0) {
+    throw new Error('No published articles found in database')
+  }
+  return `/articles/${content[0].id}`
 }
 
 /** 로그인된 페이지에서 DRAFT 게시글을 UI로 생성하고 그 URL을 반환한다. */
@@ -23,7 +27,11 @@ async function createDraftArticle(page: import('@playwright/test').Page) {
   await page.getByPlaceholder(/마크다운으로 작성하세요/).fill('테스트 본문')
   await page.getByRole('button', { name: '임시저장' }).click()
   await expect(page).toHaveURL(/\/articles\/\d+/, { timeout: 10_000 })
-  const articleId = Number(page.url().match(/\/articles\/(\d+)/)![1])
+  const match = page.url().match(/\/articles\/(\d+)/)
+  if (!match) {
+    throw new Error(`Failed to extract article ID from URL: ${page.url()}`)
+  }
+  const articleId = Number(match[1])
   return { articleId, articleUrl: `/articles/${articleId}` }
 }
 

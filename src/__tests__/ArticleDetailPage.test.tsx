@@ -112,12 +112,12 @@ describe('ArticleDetailPage — 수정/삭제 버튼 역할별 표시', () => {
     expect(screen.queryByText('삭제')).not.toBeInTheDocument()
   })
 
-  it('[어드민] 타인 글에 삭제 버튼은 보이지만 수정 버튼은 없다', async () => {
-    // canEdit = 본인만 / canDelete = 본인 or ADMIN
+  it('[어드민] 타인 글에 수정 버튼과 삭제 버튼이 모두 표시된다', async () => {
+    // canEdit = canDelete = 본인 or ADMIN
     mockUseAuth.mockReturnValue(ADMIN_AUTH)  // authorId(100) !== adminId(1624)
     renderDetail()
     await screen.findByText(MOCK_POST.title)
-    expect(screen.queryByText('수정')).not.toBeInTheDocument()
+    expect(screen.getByText('수정')).toBeInTheDocument()
     expect(screen.getByText('삭제')).toBeInTheDocument()
   })
 })
