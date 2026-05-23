@@ -13,7 +13,6 @@ vi.mock('../api/admin', () => ({
   getStats: vi.fn().mockResolvedValue({
     totalPosts: 0,
     publishedPosts: 0,
-    draftPosts: 0,
     pendingReviewPosts: 0,
     rejectedPosts: 0,
     totalComments: 0,
@@ -38,7 +37,6 @@ import AdminPage from '../pages/AdminPage'
 
 const mockStats = {
   totalPosts: 20,
-  draftPosts: 2,
   pendingReviewPosts: 5,
   publishedPosts: 10,
   rejectedPosts: 3,
@@ -199,7 +197,7 @@ describe('AdminPage - 통계', () => {
     vi.mocked(getPosts).mockResolvedValue(emptyPage)
   })
 
-  it('6개 통계 카드가 모두 표시된다', async () => {
+  it('5개 통계 카드가 모두 표시된다', async () => {
     renderAdminPage()
 
     await waitFor(() => {
@@ -207,7 +205,6 @@ describe('AdminPage - 통계', () => {
       expect(screen.getAllByText('검토 대기').length).toBeGreaterThan(0)
       expect(screen.getByText('게시된 글')).toBeInTheDocument()
       expect(screen.getAllByText('거부됨').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('초안').length).toBeGreaterThan(0)
       expect(screen.getByText('총 댓글')).toBeInTheDocument()
     })
   })
