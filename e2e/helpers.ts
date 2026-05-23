@@ -25,10 +25,12 @@ export async function loginAs(page: Page, role: 'admin' | 'member') {
 export async function gotoAndWaitForAuth(page: Page, url: string) {
   const currentOrigin = new URL(page.url()).origin
   const targetUrl = url.startsWith('http') ? url : `${currentOrigin}${url}`
-  const targetPath = url.startsWith('http') ? new URL(url).pathname : url
+  const parsedTarget = new URL(targetUrl)
+  const targetOrigin = parsedTarget.origin
+  const targetPath = parsedTarget.pathname + parsedTarget.search + parsedTarget.hash
 
-  if (!page.url().startsWith(currentOrigin)) {
-    // Not on the same origin yet — fall back to hard navigation
+  if (targetOrigin !== currentOrigin) {
+    // Cross-origin — fall back to hard navigation
     await page.goto(url)
     await page.getByRole('button', { name: '로그아웃' }).waitFor({ state: 'visible', timeout: 15_000 })
     return

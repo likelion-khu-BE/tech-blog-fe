@@ -1,4 +1,4 @@
-﻿import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import ArticleWritePage from '../pages/ArticleWritePage'
@@ -14,6 +14,15 @@ vi.mock('../hooks/usePageTransition', () => ({
   usePageTransition: () => true,
 }))
 
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: vi.fn(),
+}))
+
+vi.mock('../api/admin', () => ({
+  publishPost: vi.fn(),
+}))
+
+import { useAuth } from '../contexts/AuthContext'
 import { createPost, updatePost, getPost, submitPost } from '../api/posts'
 
 const mockNavigate = vi.fn()
@@ -74,6 +83,14 @@ describe('ArticleWritePage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockNavigate.mockReset()
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      userId: 1,
+      role: 'MEMBER',
+      login: vi.fn(),
+      logout: vi.fn(),
+    })
   })
 
   describe('새 글 작성 모드 (비 PUBLISHED)', () => {

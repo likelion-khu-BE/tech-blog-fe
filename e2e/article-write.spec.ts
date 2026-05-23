@@ -125,8 +125,10 @@ test.describe('아티클 작성 — 답글 작성 (#5)', () => {
     await loginAs(page, 'member')
 
     const res = await page.request.get('/api/blog/posts?size=1')
+    expect(res.ok()).toBeTruthy()
     const data = await res.json()
     const postId = (data.content as { id: number }[])[0]?.id
+    expect(postId, '답글 대상 게시글이 없습니다').toBeTruthy()
 
     await gotoAndWaitForAuth(page, `/articles/${postId}`)
     await expect(page.locator('h1').first()).toBeVisible({ timeout: 8_000 })
