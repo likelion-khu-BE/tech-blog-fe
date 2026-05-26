@@ -4,6 +4,7 @@ import client from './client'
 
 export interface UserResponse {
   id: number
+  memberId: number | null
   email: string
   role: 'ADMIN' | 'MEMBER'
   status: 'PENDING' | 'ACTIVE' | 'REJECTED' | 'EXPIRED'
@@ -64,4 +65,18 @@ export async function updatePostStatus(id: number, status: 'DRAFT' | 'PUBLISHED'
 
 export async function deletePost(id: number): Promise<void> {
   await client.delete(`/api/blog/admin/posts/${id}`)
+}
+
+// ── 통계 ──
+
+export interface AdminStats {
+  totalPosts: number
+  publishedPosts: number
+  draftPosts: number
+  totalComments: number
+}
+
+export async function getStats(): Promise<AdminStats> {
+  const { data } = await client.get<AdminStats>('/api/blog/admin/stats')
+  return data
 }

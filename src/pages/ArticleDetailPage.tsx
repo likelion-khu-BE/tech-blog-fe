@@ -4,9 +4,10 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { usePageTransition } from '../hooks/usePageTransition'
 import { useAuth } from '../contexts/AuthContext'
-import { getPost, deletePost } from '../api/posts'
+import { getPost, deletePost, toggleBookmark } from '../api/posts'
 import { timeAgo } from '../utils/time'
 import LikeButton from '../components/article/LikeButton'
+import { CommentSection } from '../components/comment/CommentSection'
 import type { Post } from '../types/post'
 
 export default function ArticleDetailPage() {
@@ -20,17 +21,76 @@ export default function ArticleDetailPage() {
   const [notFound, setNotFound] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
+  const [bookmarked, setBookmarked] = useState(false)
+  const [bookmarkCount, setBookmarkCount] = useState(0)
+  const [isBookmarking, setIsBookmarking] = useState(false)
+
+  const [originalTitle, setOriginalTitle] = useState<string | null>(null)
+  const [originalNotFound, setOriginalNotFound] = useState(false)
+  const [originalFetchFailed, setOriginalFetchFailed] = useState(false)
+
   useEffect(() => {
     if (!id) return
+
+    let ignore = false
+
     setIsLoading(true)
     setNotFound(false)
+    setOriginalTitle(null)
+    setOriginalNotFound(false)
+    setOriginalFetchFailed(false)
+
     getPost(Number(id))
-      .then(setPost)
-      .catch((err) => {
-        if (err?.response?.status === 404) setNotFound(true)
+      .then((data) => {
+        if (ignore) return
+
+        setPost(data)
+        setBookmarked(data.bookmarked)
+        setBookmarkCount(data.bookmarkCount)
       })
-      .finally(() => setIsLoading(false))
+      .catch((err) => {
+        if (ignore) return
+
+        if (err?.response?.status === 404) {
+          setNotFound(true)
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setIsLoading(false)
+        }
+      })
+
+    return () => {
+      ignore = true
+    }
   }, [id])
+
+  useEffect(() => {
+    if (!post?.replyToId) return
+
+    let ignore = false
+
+    getPost(post.replyToId)
+      .then((orig) => {
+        if (!ignore) {
+          setOriginalTitle(orig.title)
+        }
+      })
+      .catch((err) => {
+        if (ignore) return
+
+        if (err?.response?.status === 404) {
+          setOriginalNotFound(true)
+        } else {
+          setOriginalFetchFailed(true)
+        }
+      })
+
+    return () => {
+      ignore = true
+    }
+  }, [post?.replyToId])
 
   if (isLoading) {
     return (
@@ -56,10 +116,42 @@ export default function ArticleDetailPage() {
   }
 
   const canEdit = isAuthenticated && (userId === post.authorId || role === 'ADMIN')
+  const canDelete = isAuthenticated && (userId === post.authorId || role === 'ADMIN')
+
+  async function handleBookmark() {
+    if (!isAuthenticated) {
+      alert('북마크하려면 로그인이 필요합니다.')
+      return
+    }
+
+    if (isBookmarking) return
+
+    const prevBookmarked = bookmarked
+    const prevBookmarkCount = bookmarkCount
+
+    setIsBookmarking(true)
+
+    try {
+      const nextBookmarked = await toggleBookmark(post!.id)
+
+      setBookmarked(nextBookmarked)
+      setBookmarkCount(
+        prevBookmarkCount + (nextBookmarked === prevBookmarked ? 0 : nextBookmarked ? 1 : -1),
+      )
+    } catch {
+      setBookmarked(prevBookmarked)
+      setBookmarkCount(prevBookmarkCount)
+      alert('북마크 처리에 실패했습니다.')
+    } finally {
+      setIsBookmarking(false)
+    }
+  }
 
   async function handleDelete() {
     if (!window.confirm('게시글을 삭제하시겠습니까?')) return
+
     setIsDeleting(true)
+
     try {
       await deletePost(post!.id)
       navigate('/articles', { replace: true })
@@ -67,6 +159,17 @@ export default function ArticleDetailPage() {
       alert('삭제에 실패했습니다.')
       setIsDeleting(false)
     }
+  }
+
+  function handleAuthorClick() {
+    if (!post?.authorId) return
+
+    navigate('/articles', {
+      state: {
+        authorId: post.authorId,
+        authorLabel: post.authorName ?? post.authorEmail ?? `ID ${post.authorId}`,
+      },
+    })
   }
 
   return (
@@ -96,14 +199,27 @@ export default function ArticleDetailPage() {
             </span>
           </div>
 
-          {canEdit && (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {isAuthenticated && (
+              <button
+                onClick={() => navigate(`/articles/write?replyTo=${post.id}`)}
+                className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
+                title="이 글을 답글 작성"
+              >
+                답글 작성
+              </button>
+            )}
+
+            {canEdit && (
               <Link
                 to={`/articles/${post.id}/edit`}
                 className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
               >
                 수정
               </Link>
+            )}
+
+            {canDelete && (
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
@@ -111,22 +227,54 @@ export default function ArticleDetailPage() {
               >
                 {isDeleting ? '삭제 중...' : '삭제'}
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <h1 className="text-2xl md:text-3xl font-bold text-text-primary leading-snug break-keep">
           {post.title}
         </h1>
 
-        <div className="mt-6 flex items-center gap-3 text-xs text-text-tertiary">
-          {post.authorEmail && <span>{post.authorEmail.split('@')[0]}</span>}
-          {post.authorEmail && <span>&middot;</span>}
-          <span>{post.generation}</span>
-          <span>&middot;</span>
-          <span>{timeAgo(post.createdAt)}</span>
-          <span>&middot;</span>
-          <LikeButton postId={post.id} initialLiked={post.liked} initialCount={post.likeCount} />
+        <div className="mt-6 flex items-center justify-between gap-3 text-xs text-text-tertiary">
+          <div className="flex items-center gap-3">
+            {post.authorName ? (
+              <>
+                <button
+                  onClick={handleAuthorClick}
+                  className="hover:text-accent-primary transition-colors hover:underline underline-offset-2"
+                >
+                  {post.authorName}
+                </button>
+                <span>&middot;</span>
+              </>
+            ) : post.authorEmail ? (
+              <>
+                <span>{post.authorEmail.split('@')[0]}</span>
+                <span>&middot;</span>
+              </>
+            ) : null}
+
+            <span>{post.generation}</span>
+            <span>&middot;</span>
+            <span>{timeAgo(post.createdAt)}</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <LikeButton postId={post.id} initialLiked={post.liked} initialCount={post.likeCount} />
+
+            <button
+              onClick={handleBookmark}
+              disabled={isBookmarking}
+              className={`inline-flex items-center gap-1.5 transition-colors disabled:opacity-40 ${
+                bookmarked ? 'text-accent-primary' : 'text-text-tertiary hover:text-text-secondary'
+              }`}
+            >
+              <svg className="w-4 h-4" fill={bookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+              {bookmarkCount > 0 && <span>{bookmarkCount}</span>}
+            </button>
+          </div>
         </div>
 
         {post.tags.length > 0 && (
@@ -136,6 +284,30 @@ export default function ArticleDetailPage() {
                 {tag}
               </span>
             ))}
+          </div>
+        )}
+
+        {post.replyToId && (
+          <div className="mt-4 flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default text-xs text-text-tertiary">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span className="shrink-0">원글:</span>
+
+            {originalNotFound ? (
+              <span className="text-text-tertiary/60">(삭제된 게시글)</span>
+            ) : originalFetchFailed ? (
+              <span className="text-text-tertiary/60">원글을 불러올 수 없습니다.</span>
+            ) : originalTitle ? (
+              <Link
+                to={`/articles/${post.replyToId}`}
+                className="text-accent-primary hover:underline underline-offset-2 truncate"
+              >
+                {originalTitle}
+              </Link>
+            ) : (
+              <span className="text-text-tertiary/60">불러오는 중...</span>
+            )}
           </div>
         )}
       </header>
@@ -154,6 +326,8 @@ export default function ArticleDetailPage() {
           </div>
         )}
       </div>
+
+      <CommentSection postId={post.id} />
 
       {/* Footer nav */}
       <div className="border-t border-border-default py-8 mb-16">

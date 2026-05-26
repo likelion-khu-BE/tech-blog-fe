@@ -1,5 +1,15 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getUsers, approveUser, rejectUser, getPosts, updatePostStatus, deletePost, type UserResponse, type AdminPost } from '../api/admin'
+import { Link } from 'react-router-dom'
+import { getUsers, approveUser, rejectUser, getPosts, updatePostStatus, deletePost, getStats, type UserResponse, type AdminPost, type AdminStats } from '../api/admin'
+import {
+  getGenerations,
+  createGeneration,
+  updateGeneration,
+  getGenerationMembers,
+  addGenerationMember,
+  getMembers,
+} from '../api/profile'
+import type { Generation, GenerationMember, GenerationRole, CreateGenerationRequest } from '../types/profile'
 
 // ── 회원 관리 ──
 
@@ -88,7 +98,11 @@ function UserManagement() {
               className="flex items-center justify-between px-4 py-3 rounded-lg bg-bg-secondary border border-border-default"
             >
               <div className="flex items-center gap-4 min-w-0">
-                <span className="text-sm text-text-primary truncate">{user.email}</span>
+                {user.status === 'ACTIVE' && user.memberId ? (
+                  <Link to={`/members/${user.memberId}`} className="text-sm text-text-primary truncate hover:text-accent-primary transition-colors">{user.email}</Link>
+                ) : (
+                  <span className="text-sm text-text-primary truncate">{user.email}</span>
+                )}
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[user.status] ?? ''}`}>
                   {user.status}
                 </span>
@@ -219,7 +233,7 @@ function ArticleManagement() {
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${POST_STATUS_BADGE[post.status] ?? ''}`}>
                   {post.status}
                 </span>
-                <span className="text-sm text-text-primary truncate">{post.title}</span>
+                <Link to={`/articles/${post.id}`} className="text-sm text-text-primary truncate hover:text-accent-primary transition-colors">{post.title}</Link>
                 <span className="text-xs text-text-tertiary shrink-0 hidden md:block">{post.board} · {post.category}</span>
                 <span className="text-xs text-text-tertiary shrink-0 hidden lg:block">{fmt(post.createdAt)}</span>
               </div>
@@ -272,19 +286,351 @@ function ArticleManagement() {
   )
 }
 
+// ── 통계 대시보드 ──
+
+const STAT_CARDS: { key: keyof AdminStats; label: string; colorClass: string }[] = [
+  { key: 'totalPosts',     label: '전체 게시글',  colorClass: 'text-accent-secondary' },
+  { key: 'publishedPosts', label: '게시된 글',    colorClass: 'text-green-400' },
+  { key: 'draftPosts',     label: '초안',         colorClass: 'text-yellow-400' },
+  { key: 'totalComments',  label: '총 댓글',      colorClass: 'text-text-primary' },
+]
+
+function StatsSection() {
+  const [stats, setStats] = useState<AdminStats | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    getStats()
+      .then((data) => { if (active) setStats(data) })
+      .catch(() => { if (active) setStats(null) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  return (
+    <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 transition-opacity duration-150 ${loading ? 'opacity-40' : 'opacity-100'}`}>
+      {STAT_CARDS.map(({ key, label, colorClass }) => (
+        <div key={key} className="px-4 py-4 rounded-lg bg-bg-secondary border border-border-default">
+          <p className="text-xs text-text-tertiary mb-2">{label}</p>
+          <p className={`text-2xl font-bold ${colorClass}`}>
+            {stats ? stats[key].toLocaleString() : '—'}
+          </p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── 기수 관리 ──
+
+const ROLE_OPTIONS: { value: GenerationRole; label: string }[] = [
+  { value: 'member', label: '멤버' },
+  { value: 'operating', label: '운영진' },
+]
+
+function GenerationManagement() {
+  const [generations, setGenerations] = useState<Generation[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedGen, setSelectedGen] = useState<number | null>(null)
+  const [genMembers, setGenMembers] = useState<GenerationMember[]>([])
+  const [membersLoading, setMembersLoading] = useState(false)
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [editingGen, setEditingGen] = useState<Generation | null>(null)
+  const [showAddMember, setShowAddMember] = useState(false)
+
+  const emptyForm: CreateGenerationRequest = { number: 0, startDate: '', endDate: null, isCurrent: false }
+  const [form, setForm] = useState<CreateGenerationRequest>(emptyForm)
+  const [formLoading, setFormLoading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  const [allMembers, setAllMembers] = useState<{ id: number; name: string }[]>([])
+  const [addMemberForm, setAddMemberForm] = useState<{ memberId: number | ''; roleInGen: GenerationRole }>({ memberId: '', roleInGen: 'member' })
+  const [addMemberLoading, setAddMemberLoading] = useState(false)
+  const [addMemberError, setAddMemberError] = useState<string | null>(null)
+
+  const loadGenerations = useCallback(async () => {
+    setLoading(true)
+    try {
+      const gens = await getGenerations()
+      setGenerations(gens.sort((a, b) => b.number - a.number))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { loadGenerations() }, [loadGenerations])
+
+  useEffect(() => {
+    if (selectedGen == null) return
+    setMembersLoading(true)
+    getGenerationMembers(selectedGen)
+      .then(setGenMembers)
+      .catch(() => setGenMembers([]))
+      .finally(() => setMembersLoading(false))
+  }, [selectedGen])
+
+  function openCreate() {
+    setForm(emptyForm)
+    setFormError(null)
+    setEditingGen(null)
+    setShowCreateForm(true)
+  }
+
+  function openEdit(gen: Generation) {
+    setForm({ number: gen.number, startDate: gen.startDate, endDate: gen.endDate, isCurrent: gen.isCurrent })
+    setFormError(null)
+    setEditingGen(gen)
+    setShowCreateForm(true)
+  }
+
+  async function handleFormSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.startDate) return
+    setFormLoading(true)
+    setFormError(null)
+    try {
+      if (editingGen) {
+        await updateGeneration(editingGen.number, form)
+      } else {
+        await createGeneration(form)
+      }
+      setShowCreateForm(false)
+      await loadGenerations()
+    } catch {
+      setFormError(editingGen ? '기수 수정에 실패했습니다.' : '기수 생성에 실패했습니다.')
+    } finally {
+      setFormLoading(false)
+    }
+  }
+
+  async function openAddMember(genNumber: number) {
+    setSelectedGen(genNumber)
+    setAddMemberForm({ memberId: '', roleInGen: 'member' })
+    setAddMemberError(null)
+    if (allMembers.length === 0) {
+      const members = await getMembers()
+      setAllMembers(members.map((m) => ({ id: m.id, name: m.name })))
+    }
+    setShowAddMember(true)
+  }
+
+  async function handleAddMember(e: React.FormEvent) {
+    e.preventDefault()
+    if (!addMemberForm.memberId || selectedGen == null) return
+    setAddMemberLoading(true)
+    setAddMemberError(null)
+    try {
+      await addGenerationMember(selectedGen, { memberId: Number(addMemberForm.memberId), roleInGen: addMemberForm.roleInGen })
+      setShowAddMember(false)
+      setMembersLoading(true)
+      getGenerationMembers(selectedGen).then(setGenMembers).finally(() => setMembersLoading(false))
+    } catch {
+      setAddMemberError('멤버 등록에 실패했습니다.')
+    } finally {
+      setAddMemberLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-text-tertiary">기수를 생성하고 멤버를 관리합니다.</p>
+        <button
+          onClick={openCreate}
+          className="text-xs px-3 py-1.5 rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition-colors"
+        >
+          + 기수 생성
+        </button>
+      </div>
+
+      {showCreateForm && (
+        <div className="p-4 rounded-lg border border-border-default bg-bg-secondary">
+          <h3 className="text-sm font-semibold text-text-primary mb-4">
+            {editingGen ? `${editingGen.number}기 수정` : '새 기수 생성'}
+          </h3>
+          <form onSubmit={handleFormSubmit} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">기수 번호 *</label>
+                <input
+                  type="number"
+                  value={form.number || ''}
+                  onChange={(e) => setForm((p) => ({ ...p, number: Number(e.target.value) }))}
+                  disabled={!!editingGen}
+                  className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50 disabled:opacity-50"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">시작일 *</label>
+                <input
+                  type="date"
+                  value={form.startDate}
+                  onChange={(e) => setForm((p) => ({ ...p, startDate: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">종료일</label>
+                <input
+                  type="date"
+                  value={form.endDate ?? ''}
+                  onChange={(e) => setForm((p) => ({ ...p, endDate: e.target.value || null }))}
+                  className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
+                />
+              </div>
+              <div className="flex items-center gap-2 mt-5">
+                <input
+                  type="checkbox"
+                  id="isCurrent"
+                  checked={form.isCurrent ?? false}
+                  onChange={(e) => setForm((p) => ({ ...p, isCurrent: e.target.checked }))}
+                  className="w-4 h-4 accent-accent-primary"
+                />
+                <label htmlFor="isCurrent" className="text-xs text-text-secondary">현재 기수</label>
+              </div>
+            </div>
+            {formError && <p className="text-xs text-red-400">{formError}</p>}
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={() => setShowCreateForm(false)} className="flex-1 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors">
+                취소
+              </button>
+              <button type="submit" disabled={formLoading} className="flex-1 py-2 text-sm rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-40 transition-colors">
+                {formLoading ? '저장 중...' : (editingGen ? '수정' : '생성')}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-sm text-text-tertiary">불러오는 중...</div>
+      ) : generations.length === 0 ? (
+        <p className="text-sm text-text-tertiary">등록된 기수가 없습니다.</p>
+      ) : (
+        <div className="space-y-2">
+          {generations.map((gen) => (
+            <div key={gen.number} className="rounded-lg border border-border-default overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 bg-bg-secondary">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-text-primary">{gen.number}기</span>
+                  {gen.isCurrent && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent-primary/15 text-accent-primary">현재</span>
+                  )}
+                  <span className="text-xs text-text-tertiary">{gen.startDate}{gen.endDate ? ` ~ ${gen.endDate}` : ' ~ 진행중'}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedGen(selectedGen === gen.number ? null : gen.number)}
+                    className="text-xs px-2.5 py-1 rounded border border-border-default text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50 transition-colors"
+                  >
+                    {selectedGen === gen.number ? '접기' : '멤버'}
+                  </button>
+                  <button
+                    onClick={() => openEdit(gen)}
+                    className="text-xs px-2.5 py-1 rounded border border-border-default text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50 transition-colors"
+                  >
+                    수정
+                  </button>
+                </div>
+              </div>
+
+              {selectedGen === gen.number && (
+                <div className="px-4 pb-4 pt-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs text-text-tertiary">멤버 목록</p>
+                    <button
+                      onClick={() => openAddMember(gen.number)}
+                      className="text-xs px-2.5 py-1 rounded border border-border-default text-text-tertiary hover:text-accent-primary hover:border-accent-primary/40 transition-colors"
+                    >
+                      + 멤버 등록
+                    </button>
+                  </div>
+                  {membersLoading ? (
+                    <p className="text-xs text-text-tertiary">불러오는 중...</p>
+                  ) : genMembers.length === 0 ? (
+                    <p className="text-xs text-text-tertiary">등록된 멤버가 없습니다.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {genMembers.map((m) => (
+                        <div key={m.memberId} className="flex items-center gap-2 py-1.5 text-xs">
+                          <div className="w-6 h-6 rounded-full bg-bg-tertiary flex items-center justify-center overflow-hidden shrink-0">
+                            {m.profileImageUrl
+                              ? <img src={m.profileImageUrl} alt={m.name} className="w-full h-full object-cover" />
+                              : <span className="text-[10px] font-semibold text-text-tertiary">{m.name.slice(0, 1)}</span>
+                            }
+                          </div>
+                          <span className="text-text-primary">{m.name}</span>
+                          <span className="text-text-tertiary">{m.roleInGen === 'operating' ? '운영진' : '멤버'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {showAddMember && selectedGen === gen.number && (
+                    <form onSubmit={handleAddMember} className="mt-3 p-3 rounded-lg border border-border-default bg-bg-tertiary/30 space-y-3">
+                      <p className="text-xs font-medium text-text-primary">멤버 등록</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <select
+                          value={addMemberForm.memberId}
+                          onChange={(e) => setAddMemberForm((p) => ({ ...p, memberId: e.target.value ? Number(e.target.value) : '' }))}
+                          className="px-2 py-1.5 text-xs bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
+                          required
+                        >
+                          <option value="">멤버 선택</option>
+                          {allMembers.map((m) => (
+                            <option key={m.id} value={m.id}>{m.name}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={addMemberForm.roleInGen}
+                          onChange={(e) => setAddMemberForm((p) => ({ ...p, roleInGen: e.target.value as GenerationRole }))}
+                          className="px-2 py-1.5 text-xs bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
+                        >
+                          {ROLE_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {addMemberError && <p className="text-xs text-red-400">{addMemberError}</p>}
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => setShowAddMember(false)} className="flex-1 py-1.5 text-xs rounded border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors">
+                          취소
+                        </button>
+                        <button type="submit" disabled={addMemberLoading} className="flex-1 py-1.5 text-xs rounded bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-40 transition-colors">
+                          {addMemberLoading ? '등록 중...' : '등록'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── 메인 페이지 ──
 
 const SECTIONS = [
-  { key: 'users',    label: '회원 관리' },
-  { key: 'articles', label: '아티클 관리' },
+  { key: 'users',       label: '회원 관리' },
+  { key: 'articles',    label: '아티클 관리' },
+  { key: 'generations', label: '기수 관리' },
 ] as const
 
 export default function AdminPage() {
-  const [section, setSection] = useState<'users' | 'articles'>('users')
+  const [section, setSection] = useState<'users' | 'articles' | 'generations'>('users')
 
   return (
     <div className="max-w-[900px] mx-auto px-4 md:px-5 pt-24 pb-16">
       <h1 className="text-xl font-bold text-text-primary mb-6">관리자</h1>
+
+      <StatsSection />
 
       <div className="flex gap-3 mb-8">
         {SECTIONS.map(({ key, label }) => (
@@ -302,7 +648,9 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {section === 'users' ? <UserManagement /> : <ArticleManagement />}
+      {section === 'users' && <UserManagement />}
+      {section === 'articles' && <ArticleManagement />}
+      {section === 'generations' && <GenerationManagement />}
     </div>
   )
 }

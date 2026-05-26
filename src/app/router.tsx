@@ -15,6 +15,13 @@ const LoginPage = lazy(() => import('../pages/LoginPage'))
 const SignupPage = lazy(() => import('../pages/SignupPage'))
 const SessionBoardPage = lazy(() => import('../pages/SessionBoardPage'))
 const AdminPage = lazy(() => import('../pages/AdminPage'))
+const MyProfilePage = lazy(() => import('../pages/MyProfilePage'))
+const TeamsPage = lazy(() => import('../pages/TeamsPage'))
+const TeamDetailPage = lazy(() => import('../pages/TeamDetailPage'))
+const QnAPage = lazy(() => import('../pages/QnAPage'))
+const QnADetailPage = lazy(() => import('../pages/QnADetailPage'))
+const QnAWritePage = lazy(() => import('../pages/QnAWritePage'))
+const QnAEditPage = lazy(() => import('../pages/QnAEditPage'))
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={null}>{children}</Suspense>
@@ -36,6 +43,13 @@ export const router = createBrowserRouter([
       { path: 'sessions', element: <SuspenseWrapper><SessionBoardPage /></SuspenseWrapper> },
       { path: 'login', element: <SuspenseWrapper><LoginPage /></SuspenseWrapper> },
       { path: 'signup', element: <SuspenseWrapper><SignupPage /></SuspenseWrapper> },
+      { path: 'teams', element: <SuspenseWrapper><TeamsPage /></SuspenseWrapper> },
+      { path: 'teams/:id', element: <SuspenseWrapper><TeamDetailPage /></SuspenseWrapper> },
+      { path: 'qna', element: <SuspenseWrapper><QnAPage /></SuspenseWrapper> },
+      { path: 'qna/write', element: <SuspenseWrapper><ProtectedRoute><QnAWritePage /></ProtectedRoute></SuspenseWrapper> },
+      { path: 'qna/:id', element: <SuspenseWrapper><QnADetailPage /></SuspenseWrapper> },
+      { path: 'qna/:id/edit', element: <SuspenseWrapper><ProtectedRoute><QnAEditPage /></ProtectedRoute></SuspenseWrapper> },
+      { path: 'profile', element: <SuspenseWrapper><ProtectedRoute><MyProfilePage /></ProtectedRoute></SuspenseWrapper> },
       { path: 'admin', element: <SuspenseWrapper><ProtectedRoute requiredRole="ADMIN"><AdminPage /></ProtectedRoute></SuspenseWrapper> },
       { path: '*', element: <SuspenseWrapper><NotFoundPage /></SuspenseWrapper> },
     ],
