@@ -67,44 +67,42 @@ test.describe('ArticlesPage — #8 기수 필터', () => {
 })
 
 test.describe('ArticlesPage — #6 작성자 필터', () => {
+  async function findArticleWithAuthorName(page: import('@playwright/test').Page) {
+    const res = await page.request.get('/api/blog/posts?size=20')
+    expect(res.ok()).toBeTruthy()
+    const data = await res.json()
+    return (data.content as { id: number; authorName: string | null }[]).find(p => !!p.authorName) ?? null
+  }
+
   test('게시글 목록에서 글 클릭 → 상세 → 작성자 클릭 시 작성자 필터 배지가 표시된다', async ({ page }) => {
-    await page.goto('/articles')
-
-    const firstArticle = page.locator('a[href^="/articles/"]').first()
-    expect(await firstArticle.isVisible({ timeout: 8_000 }), 'DB에 게시글이 없습니다').toBe(true)
-
-    await firstArticle.click()
-    await page.waitForURL(/\/articles\/\d+/)
-    await expect(page.locator('h1').first()).toBeVisible({ timeout: 8_000 })
-
-    // 작성자 버튼: authorName이 표시되는 header 내 첫 번째 button
-    const authorBtn = page.locator('header button').first()
-    if (!(await authorBtn.isVisible())) {
-      test.skip(true, '작성자명이 없는 게시글')
+    const target = await findArticleWithAuthorName(page)
+    if (!target) {
+      test.skip(true, 'authorName이 있는 게시글 없음')
       return
     }
 
+    await page.goto(`/articles/${target.id}`)
+    await expect(page.locator('h1').first()).toBeVisible({ timeout: 8_000 })
+
+    const authorBtn = page.locator('header button').first()
+    await expect(authorBtn).toBeVisible({ timeout: 5_000 })
     await authorBtn.click()
     await expect(page).toHaveURL('/articles')
     await expect(page.locator('text=작성자 필터:')).toBeVisible({ timeout: 5_000 })
   })
 
   test('작성자 필터 배지 X 클릭 시 필터가 해제된다', async ({ page }) => {
-    await page.goto('/articles')
-
-    const firstArticle = page.locator('a[href^="/articles/"]').first()
-    expect(await firstArticle.isVisible({ timeout: 8_000 }), 'DB에 게시글이 없습니다').toBe(true)
-
-    await firstArticle.click()
-    await page.waitForURL(/\/articles\/\d+/)
-    await expect(page.locator('h1').first()).toBeVisible({ timeout: 8_000 })
-
-    const authorBtn = page.locator('header button').first()
-    if (!(await authorBtn.isVisible())) {
-      test.skip(true, '작성자명이 없는 게시글')
+    const target = await findArticleWithAuthorName(page)
+    if (!target) {
+      test.skip(true, 'authorName이 있는 게시글 없음')
       return
     }
 
+    await page.goto(`/articles/${target.id}`)
+    await expect(page.locator('h1').first()).toBeVisible({ timeout: 8_000 })
+
+    const authorBtn = page.locator('header button').first()
+    await expect(authorBtn).toBeVisible({ timeout: 5_000 })
     await authorBtn.click()
     await page.waitForURL('/articles')
     await expect(page.locator('text=작성자 필터:')).toBeVisible({ timeout: 5_000 })

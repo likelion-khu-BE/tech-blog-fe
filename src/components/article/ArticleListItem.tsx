@@ -5,7 +5,6 @@ import type { PostSummary } from '../../types/post'
 
 interface Props {
   post: PostSummary
-  showNewBadge?: boolean
   showTags?: boolean
   onClick?: () => void
   className?: string
@@ -14,7 +13,6 @@ interface Props {
 
 export const ArticleListItem = memo(function ArticleListItem({
   post,
-  showNewBadge = false,
   showTags = true,
   onClick,
   className = '',
@@ -35,7 +33,6 @@ export const ArticleListItem = memo(function ArticleListItem({
             <h3 className="text-sm md:text-base font-medium text-text-primary group-hover:text-accent-primary transition-colors break-keep leading-snug">
               {post.title}
             </h3>
-            {showNewBadge && <span className="shrink-0 text-[10px] text-accent-primary/80">NEW</span>}
           </div>
 
           <div className="mt-2.5 flex items-center gap-2 text-xs text-text-tertiary">

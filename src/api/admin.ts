@@ -31,13 +31,16 @@ export async function rejectUser(id: number): Promise<UserResponse> {
 
 // ── 아티클 관리 ──
 
+export type AdminPostStatus = 'PENDING_REVIEW' | 'PUBLISHED' | 'REJECTED'
+
 export interface AdminPost {
   id: number
   title: string
   board: string
   category: string
   generation: string
-  status: 'DRAFT' | 'PUBLISHED'
+  status: AdminPostStatus
+  rejectedReason: string | null
   authorId: number
   tags: string[]
   likeCount: number
@@ -51,15 +54,20 @@ export interface AdminPostPage {
   number: number
 }
 
-export async function getPosts(page = 0, size = 20): Promise<AdminPostPage> {
+export async function getPosts(status?: AdminPostStatus, page = 0, size = 20): Promise<AdminPostPage> {
   const { data } = await client.get<AdminPostPage>('/api/blog/admin/posts', {
-    params: { page, size },
+    params: { status, page, size },
   })
   return data
 }
 
-export async function updatePostStatus(id: number, status: 'DRAFT' | 'PUBLISHED'): Promise<AdminPost> {
-  const { data } = await client.patch<AdminPost>(`/api/blog/admin/posts/${id}/status`, { status })
+export async function publishPost(id: number): Promise<AdminPost> {
+  const { data } = await client.patch<AdminPost>(`/api/blog/admin/posts/${id}/status`, { status: 'PUBLISHED' })
+  return data
+}
+
+export async function rejectPost(id: number, reason: string): Promise<AdminPost> {
+  const { data } = await client.patch<AdminPost>(`/api/blog/admin/posts/${id}/status`, { status: 'REJECTED', reason })
   return data
 }
 
@@ -71,8 +79,9 @@ export async function deletePost(id: number): Promise<void> {
 
 export interface AdminStats {
   totalPosts: number
+  pendingReviewPosts: number
   publishedPosts: number
-  draftPosts: number
+  rejectedPosts: number
   totalComments: number
 }
 

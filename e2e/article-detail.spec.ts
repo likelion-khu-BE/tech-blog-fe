@@ -3,15 +3,13 @@
  */
 
 import { test, expect } from '@playwright/test'
-import { loginAs } from './helpers'
+import { loginAs, gotoAndWaitForAuth } from './helpers'
 
 async function getFirstArticleId(page: import('@playwright/test').Page): Promise<number | null> {
-  await page.goto('/articles')
-  const link = page.locator('a[href^="/articles/"]').first()
-  await expect(link).toBeVisible({ timeout: 8_000 })
-  const href = await link.getAttribute('href')
-  const match = href?.match(/\/articles\/(\d+)/)
-  return match ? Number(match[1]) : null
+  const res = await page.request.get('/api/blog/posts?size=1')
+  if (!res.ok()) return null
+  const data = await res.json()
+  return (data.content as { id: number }[])?.[0]?.id ?? null
 }
 
 test.describe('ArticleDetailPage — #5 답글 버튼 역할별 표시', () => {
@@ -29,7 +27,7 @@ test.describe('ArticleDetailPage — #5 답글 버튼 역할별 표시', () => {
     const postId = await getFirstArticleId(page)
     expect(postId, 'DB에 게시글이 없습니다').not.toBeNull()
 
-    await page.goto(`/articles/${postId}`)
+    await gotoAndWaitForAuth(page, `/articles/${postId}`)
     await expect(page.getByRole('button', { name: '답글 작성' })).toBeVisible({ timeout: 8_000 })
   })
 
@@ -38,7 +36,7 @@ test.describe('ArticleDetailPage — #5 답글 버튼 역할별 표시', () => {
     const postId = await getFirstArticleId(page)
     expect(postId, 'DB에 게시글이 없습니다').not.toBeNull()
 
-    await page.goto(`/articles/${postId}`)
+    await gotoAndWaitForAuth(page, `/articles/${postId}`)
     await expect(page.getByRole('button', { name: '답글 작성' })).toBeVisible({ timeout: 8_000 })
   })
 })
@@ -49,7 +47,7 @@ test.describe('ArticleDetailPage — #5 답글 작성 플로우', () => {
     const postId = await getFirstArticleId(page)
     expect(postId, 'DB에 게시글이 없습니다').not.toBeNull()
 
-    await page.goto(`/articles/${postId}`)
+    await gotoAndWaitForAuth(page, `/articles/${postId}`)
     await page.getByRole('button', { name: '답글 작성' }).click()
 
     await expect(page).toHaveURL(new RegExp(`/articles/write\\?replyTo=${postId}`))

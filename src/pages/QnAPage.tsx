@@ -142,7 +142,15 @@ export default function QnAPage() {
           size: 30,
         });
         if (seq !== requestSeq.current) return;
-        setQuestions(data);
+        const sorted =
+          params.status === "전체"
+            ? [...data].sort((a, b) => {
+                if (a.status === "OPEN" && b.status !== "OPEN") return -1;
+                if (a.status !== "OPEN" && b.status === "OPEN") return 1;
+                return 0;
+              })
+            : data;
+        setQuestions(sorted);
         setError(null);
       } catch {
         if (seq !== requestSeq.current) return;

@@ -3,7 +3,9 @@ import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { usePageTransition } from '../hooks/usePageTransition'
-import { createPost, updatePost, getPost } from '../api/posts'
+import { useAuth } from '../contexts/AuthContext'
+import { createPost, updatePost, getPost, submitPost } from '../api/posts'
+import { publishPost } from '../api/admin'
 import { BOARDS, CATEGORIES, GENERATIONS } from '../types/post'
 import type { PostStatus } from '../types/post'
 
@@ -31,6 +33,8 @@ const DEFAULT_FORM: FormState = {
 
 export default function ArticleWritePage() {
   const visible = usePageTransition()
+  const { role } = useAuth()
+  const isAdmin = role === 'ADMIN'
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
   const [searchParams] = useSearchParams()
@@ -38,9 +42,10 @@ export default function ArticleWritePage() {
 
   const rawReplyTo = !isEditMode ? searchParams.get('replyTo') : null
   const parsedReplyTo = rawReplyTo ? Number(rawReplyTo) : null
-  const replyToId = parsedReplyTo !== null && Number.isInteger(parsedReplyTo) && parsedReplyTo > 0
-    ? parsedReplyTo
-    : null
+  const replyToId =
+    parsedReplyTo !== null && Number.isInteger(parsedReplyTo) && parsedReplyTo > 0
+      ? parsedReplyTo
+      : null
 
   const [replyOriginal, setReplyOriginal] = useState<{ id: number; title: string } | null>(null)
   const [replyOriginalNotFound, setReplyOriginalNotFound] = useState(false)
@@ -50,6 +55,7 @@ export default function ArticleWritePage() {
   const [tab, setTab] = useState<Tab>('write')
   const [isLoading, setIsLoading] = useState(isEditMode)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tagInput, setTagInput] = useState('')
   const tagInputRef = useRef<HTMLInputElement>(null)
@@ -127,8 +133,57 @@ export default function ArticleWritePage() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }, [])
 
-  const isValid = form.title.trim().length > 0 && form.content.trim().length > 0 && form.category.trim().length > 0
+  const isValid =
+    form.title.trim().length > 0 &&
+    form.content.trim().length > 0 &&
+    form.category.trim().length > 0
 
+  const buildUpdateBody = () => ({
+    title: form.title,
+    content: form.content,
+    board: form.board,
+    category: form.category,
+    status: form.status,
+    tags: form.tags,
+  })
+
+  const buildCreateBody = () => ({
+    title: form.title,
+    content: form.content,
+    board: form.board,
+    category: form.category,
+    status: form.status,
+    generation: form.generation,
+    tags: form.tags,
+    replyToId: replyToId ?? undefined,
+  })
+
+  // 임시저장: DRAFT 상태로 저장만 (제출하지 않음)
+  async function handleSave() {
+    if (!isValid || isSaving) return
+
+    setIsSaving(true)
+    setError(null)
+
+    try {
+      if (isEditMode && id) {
+        const updated = await updatePost(Number(id), buildUpdateBody())
+        navigate(`/articles/${updated.id}`, { replace: true })
+      } else {
+        const created = await createPost({
+          ...buildCreateBody(),
+          status: 'DRAFT',
+        })
+        navigate(`/articles/${created.id}`, { replace: true })
+      }
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setError(msg ?? '저장에 실패했습니다.')
+      setIsSaving(false)
+    }
+  }
+
+  // 제출: 저장 후 PENDING_REVIEW로 전환
   async function handleSubmit() {
     if (!isValid || isSubmitting) return
 
@@ -137,31 +192,45 @@ export default function ArticleWritePage() {
 
     try {
       if (isEditMode && id) {
-        const updated = await updatePost(Number(id), {
-          title: form.title,
-          content: form.content,
-          board: form.board,
-          category: form.category,
-          status: form.status,
-          tags: form.tags,
-        })
+        const updated = await updatePost(Number(id), buildUpdateBody())
+        if (updated.status !== 'PUBLISHED') {
+          await submitPost(updated.id)
+        }
         navigate(`/articles/${updated.id}`, { replace: true })
       } else {
-        const created = await createPost({
-          title: form.title,
-          content: form.content,
-          board: form.board,
-          category: form.category,
-          status: form.status,
-          generation: form.generation,
-          tags: form.tags,
-          replyToId: replyToId ?? undefined,
-        })
+        const created = await createPost(buildCreateBody())
+        await submitPost(created.id)
         navigate(`/articles/${created.id}`, { replace: true })
       }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setError(msg ?? '저장에 실패했습니다. 다시 시도해주세요.')
+      setError(msg ?? '제출에 실패했습니다.')
+      setIsSubmitting(false)
+    }
+  }
+
+  // 어드민 작성: 저장 후 즉시 PUBLISHED로 발행
+  async function handlePublish() {
+    if (!isValid || isSubmitting) return
+
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      if (isEditMode && id) {
+        const updated = await updatePost(Number(id), buildUpdateBody())
+        if (updated.status !== 'PUBLISHED') {
+          await publishPost(updated.id)
+        }
+        navigate(`/articles/${updated.id}`, { replace: true })
+      } else {
+        const created = await createPost(buildCreateBody())
+        await publishPost(created.id)
+        navigate(`/articles/${created.id}`, { replace: true })
+      }
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setError(msg ?? '작성에 실패했습니다.')
       setIsSubmitting(false)
     }
   }
@@ -204,13 +273,36 @@ export default function ArticleWritePage() {
             >
               취소
             </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!isValid || isSubmitting}
-              className="text-xs px-4 py-1.5 bg-accent-primary hover:bg-accent-secondary disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-            >
-              {isSubmitting ? (isEditMode ? '저장 중...' : '저장 중...') : (isEditMode ? '저장' : '저장')}
-            </button>
+
+            {/* PUBLISHED 글 수정은 임시저장 없이 바로 저장 */}
+            {form.status === 'PUBLISHED' ? (
+              <button
+                onClick={isAdmin ? handlePublish : handleSubmit}
+                disabled={!isValid || isSubmitting}
+                className="text-xs px-4 py-1.5 bg-accent-primary hover:bg-accent-secondary disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              >
+                {isSubmitting ? '저장 중...' : '저장'}
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleSave}
+                  disabled={!isValid || isSaving || isSubmitting}
+                  className="text-xs px-3 py-1.5 bg-bg-tertiary hover:bg-bg-elevated disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary rounded-lg transition-colors"
+                >
+                  {isSaving ? '저장 중...' : '임시저장'}
+                </button>
+                <button
+                  onClick={isAdmin ? handlePublish : handleSubmit}
+                  disabled={!isValid || isSubmitting || isSaving}
+                  className="text-xs px-4 py-1.5 bg-accent-primary hover:bg-accent-secondary disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                >
+                  {isSubmitting
+                    ? (isAdmin ? '작성 중...' : '제출 중...')
+                    : (isAdmin ? '작성' : '제출')}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

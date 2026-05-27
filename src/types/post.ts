@@ -1,4 +1,4 @@
-export type PostStatus = 'DRAFT' | 'PUBLISHED'
+export type PostStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'REJECTED'
 
 export const BOARDS = ['백엔드', '프론트엔드', 'AI/ML'] as const
 export type Board = (typeof BOARDS)[number]
@@ -37,6 +37,7 @@ export interface Post extends PostSummary {
   content: string
   repostFromId: number | null
   replyToId: number | null
+  rejectedReason: string | null
   bookmarkCount: number
   liked: boolean
   bookmarked: boolean
