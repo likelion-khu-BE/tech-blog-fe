@@ -18,6 +18,7 @@ export default function ArticleDetailPage() {
   const [post, setPost] = useState<Post | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [forbidden, setForbidden] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [bookmarked, setBookmarked] = useState(false)
   const [bookmarkCount, setBookmarkCount] = useState(0)
@@ -32,6 +33,7 @@ export default function ArticleDetailPage() {
     if (!id) return
     setIsLoading(true)
     setNotFound(false)
+    setForbidden(false)
     setOriginalTitle(null)
     setOriginalNotFound(false)
     setOriginalFetchFailed(false)
@@ -43,6 +45,7 @@ export default function ArticleDetailPage() {
       })
       .catch((err) => {
         if (err?.response?.status === 404) setNotFound(true)
+        else if (err?.response?.status === 403) setForbidden(true)
       })
       .finally(() => setIsLoading(false))
   }, [id])
@@ -73,6 +76,19 @@ export default function ArticleDetailPage() {
       <main className="max-w-[700px] mx-auto px-4 md:px-5 pt-14">
         <div className="pt-40 text-center">
           <p className="text-sm text-text-tertiary">게시글을 찾을 수 없습니다.</p>
+          <Link to="/articles" className="mt-4 inline-block text-sm text-accent-primary hover:underline">
+            목록으로
+          </Link>
+        </div>
+      </main>
+    )
+  }
+
+  if (forbidden) {
+    return (
+      <main className="max-w-[700px] mx-auto px-4 md:px-5 pt-14">
+        <div className="pt-40 text-center">
+          <p className="text-sm text-text-tertiary">접근 권한이 없습니다.</p>
           <Link to="/articles" className="mt-4 inline-block text-sm text-accent-primary hover:underline">
             목록으로
           </Link>
@@ -136,6 +152,30 @@ export default function ArticleDetailPage() {
           아티클 목록
         </Link>
       </div>
+
+      {/* 미발행 상태 배너 */}
+      {post.status !== 'PUBLISHED' && (
+        <div className={`mt-6 transition-opacity duration-700 ease-out ${visible ? 'opacity-100' : 'opacity-0'}`}>
+          {post.status === 'DRAFT' && (
+            <div className="px-4 py-3 rounded-lg bg-bg-secondary border border-border-default text-sm text-text-tertiary">
+              임시저장된 글입니다.
+            </div>
+          )}
+          {post.status === 'PENDING_REVIEW' && (
+            <div className="px-4 py-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-sm text-yellow-400">
+              검토 대기 중인 글입니다.
+            </div>
+          )}
+          {post.status === 'REJECTED' && (
+            <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-400 space-y-1">
+              <p>거부된 글입니다.</p>
+              {post.rejectedReason && (
+                <p className="text-xs text-red-400/80">사유: {post.rejectedReason}</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Header */}
       <header className={`pt-8 pb-8 border-b border-border-default transition-all duration-700 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
