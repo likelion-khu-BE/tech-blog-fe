@@ -6,7 +6,7 @@ import { usePageTransition } from '../hooks/usePageTransition'
 import { useAuth } from '../contexts/AuthContext'
 import { createPost, updatePost, getPost, submitPost } from '../api/posts'
 import { publishPost } from '../api/admin'
-import { BOARDS, CATEGORIES } from '../types/post'
+import { BOARDS, CATEGORIES, GENERATIONS } from '../types/post'
 import type { PostStatus } from '../types/post'
 
 type Tab = 'write' | 'preview'
@@ -15,18 +15,20 @@ interface FormState {
   title: string
   board: string
   category: string
+  generation: string
   status: PostStatus
-  content: string
   tags: string[]
+  content: string
 }
 
 const DEFAULT_FORM: FormState = {
   title: '',
   board: BOARDS[0],
   category: '',
+  generation: GENERATIONS[0],
   status: 'DRAFT',
-  content: '',
   tags: [],
+  content: '',
 }
 
 export default function ArticleWritePage() {
@@ -38,12 +40,13 @@ export default function ArticleWritePage() {
   const [searchParams] = useSearchParams()
   const isEditMode = Boolean(id)
 
-  // 원글 ID (작성 모드에서만 유효) — NaN 방지
   const rawReplyTo = !isEditMode ? searchParams.get('replyTo') : null
   const parsedReplyTo = rawReplyTo ? Number(rawReplyTo) : null
-  const replyToId = parsedReplyTo !== null && Number.isInteger(parsedReplyTo) && parsedReplyTo > 0
-    ? parsedReplyTo
-    : null
+  const replyToId =
+    parsedReplyTo !== null && Number.isInteger(parsedReplyTo) && parsedReplyTo > 0
+      ? parsedReplyTo
+      : null
+
   const [replyOriginal, setReplyOriginal] = useState<{ id: number; title: string } | null>(null)
   const [replyOriginalNotFound, setReplyOriginalNotFound] = useState(false)
   const [replyOriginalFailed, setReplyOriginalFailed] = useState(false)
@@ -60,42 +63,82 @@ export default function ArticleWritePage() {
   // 수정 모드: 기존 게시글 불러오기
   useEffect(() => {
     if (!isEditMode || !id) return
+
+    let ignore = false
+
+    setIsLoading(true)
+
     getPost(Number(id))
       .then((post) => {
+        if (ignore) return
+
         setForm({
           title: post.title,
           board: post.board,
           category: post.category,
+          generation: post.generation,
           status: post.status,
           content: post.content,
           tags: post.tags ?? [],
         })
       })
-      .catch(() => setError('게시글을 불러오지 못했습니다.'))
-      .finally(() => setIsLoading(false))
+      .catch(() => {
+        if (!ignore) {
+          setError('게시글을 불러오지 못했습니다.')
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setIsLoading(false)
+        }
+      })
+
+    return () => {
+      ignore = true
+    }
   }, [id, isEditMode])
 
   // 원글 게시글 제목 조회
   useEffect(() => {
     if (!replyToId) return
+
+    let ignore = false
+
     setReplyOriginal(null)
     setReplyOriginalNotFound(false)
     setReplyOriginalFailed(false)
+
     getPost(replyToId)
-      .then((p) => setReplyOriginal({ id: p.id, title: p.title }))
-      .catch((err) => {
-        if (err?.response?.status === 404) setReplyOriginalNotFound(true)
-        else setReplyOriginalFailed(true)
+      .then((p) => {
+        if (!ignore) {
+          setReplyOriginal({ id: p.id, title: p.title })
+        }
       })
+      .catch((err) => {
+        if (ignore) return
+
+        if (err?.response?.status === 404) {
+          setReplyOriginalNotFound(true)
+        } else {
+          setReplyOriginalFailed(true)
+        }
+      })
+
+    return () => {
+      ignore = true
+    }
   }, [replyToId])
 
   const update = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }, [])
 
-  const isValid = form.title.trim().length > 0 && form.content.trim().length > 0 && form.category.trim().length > 0
+  const isValid =
+    form.title.trim().length > 0 &&
+    form.content.trim().length > 0 &&
+    form.category.trim().length > 0
 
-  const buildBody = () => ({
+  const buildUpdateBody = () => ({
     title: form.title,
     content: form.content,
     board: form.board,
@@ -104,17 +147,33 @@ export default function ArticleWritePage() {
     tags: form.tags,
   })
 
+  const buildCreateBody = () => ({
+    title: form.title,
+    content: form.content,
+    board: form.board,
+    category: form.category,
+    status: form.status,
+    generation: form.generation,
+    tags: form.tags,
+    replyToId: replyToId ?? undefined,
+  })
+
   // 임시저장: DRAFT 상태로 저장만 (제출하지 않음)
   async function handleSave() {
     if (!isValid || isSaving) return
+
     setIsSaving(true)
     setError(null)
+
     try {
       if (isEditMode && id) {
-        const updated = await updatePost(Number(id), buildBody())
+        const updated = await updatePost(Number(id), buildUpdateBody())
         navigate(`/articles/${updated.id}`, { replace: true })
       } else {
-        const created = await createPost({ ...buildBody(), replyToId: replyToId ?? undefined })
+        const created = await createPost({
+          ...buildCreateBody(),
+          status: 'DRAFT',
+        })
         navigate(`/articles/${created.id}`, { replace: true })
       }
     } catch (err: unknown) {
@@ -124,20 +183,22 @@ export default function ArticleWritePage() {
     }
   }
 
-  // 제출: 저장 후 PENDING_REVIEW로 전환 (PUBLISHED 상태면 그냥 저장)
+  // 제출: 저장 후 PENDING_REVIEW로 전환
   async function handleSubmit() {
     if (!isValid || isSubmitting) return
+
     setIsSubmitting(true)
     setError(null)
+
     try {
       if (isEditMode && id) {
-        const updated = await updatePost(Number(id), buildBody())
+        const updated = await updatePost(Number(id), buildUpdateBody())
         if (updated.status !== 'PUBLISHED') {
           await submitPost(updated.id)
         }
         navigate(`/articles/${updated.id}`, { replace: true })
       } else {
-        const created = await createPost({ ...buildBody(), replyToId: replyToId ?? undefined })
+        const created = await createPost(buildCreateBody())
         await submitPost(created.id)
         navigate(`/articles/${created.id}`, { replace: true })
       }
@@ -151,17 +212,19 @@ export default function ArticleWritePage() {
   // 어드민 작성: 저장 후 즉시 PUBLISHED로 발행
   async function handlePublish() {
     if (!isValid || isSubmitting) return
+
     setIsSubmitting(true)
     setError(null)
+
     try {
       if (isEditMode && id) {
-        const updated = await updatePost(Number(id), buildBody())
+        const updated = await updatePost(Number(id), buildUpdateBody())
         if (updated.status !== 'PUBLISHED') {
           await publishPost(updated.id)
         }
         navigate(`/articles/${updated.id}`, { replace: true })
       } else {
-        const created = await createPost({ ...buildBody(), replyToId: replyToId ?? undefined })
+        const created = await createPost(buildCreateBody())
         await publishPost(created.id)
         navigate(`/articles/${created.id}`, { replace: true })
       }
@@ -210,6 +273,7 @@ export default function ArticleWritePage() {
             >
               취소
             </button>
+
             {/* PUBLISHED 글 수정은 임시저장 없이 바로 저장 */}
             {form.status === 'PUBLISHED' ? (
               <button
@@ -321,6 +385,46 @@ export default function ArticleWritePage() {
             </div>
           </div>
 
+          {/* Generation */}
+          {!isEditMode && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-text-tertiary w-12 shrink-0">기수</span>
+              <div className="flex gap-1.5">
+                {GENERATIONS.map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => update('generation', g)}
+                    className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                      form.generation === g
+                        ? 'border-accent-primary bg-accent-muted text-accent-secondary'
+                        : 'border-border-default text-text-tertiary hover:border-border-hover hover:text-text-secondary'
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Status */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-text-tertiary w-12 shrink-0">공개</span>
+            <div className="flex bg-bg-tertiary rounded-lg p-0.5 text-xs">
+              {(['PUBLISHED', 'DRAFT'] as PostStatus[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => update('status', s)}
+                  className={`px-3 py-1 rounded-md transition-colors ${
+                    form.status === s ? 'bg-bg-elevated text-text-primary' : 'text-text-tertiary'
+                  }`}
+                >
+                  {s === 'PUBLISHED' ? '공개' : '임시저장'}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Tags */}
           <div className="flex items-start gap-2">
             <span className="text-xs text-text-tertiary w-12 shrink-0 pt-1">태그</span>
@@ -368,7 +472,6 @@ export default function ArticleWritePage() {
               />
             </div>
           </div>
-
         </div>
 
         {/* Editor / Preview */}

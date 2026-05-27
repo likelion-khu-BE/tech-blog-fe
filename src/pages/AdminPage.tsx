@@ -402,7 +402,6 @@ function StatsSection() {
   )
 }
 
-
 // ── 기수 관리 ──
 
 const ROLE_OPTIONS: { value: GenerationRole; label: string }[] = [
@@ -420,13 +419,11 @@ function GenerationManagement() {
   const [editingGen, setEditingGen] = useState<Generation | null>(null)
   const [showAddMember, setShowAddMember] = useState(false)
 
-  // Create / edit form state
   const emptyForm: CreateGenerationRequest = { number: 0, startDate: '', endDate: null, isCurrent: false }
   const [form, setForm] = useState<CreateGenerationRequest>(emptyForm)
   const [formLoading, setFormLoading] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  // Add member form
   const [allMembers, setAllMembers] = useState<{ id: number; name: string }[]>([])
   const [addMemberForm, setAddMemberForm] = useState<{ memberId: number | ''; roleInGen: GenerationRole }>({ memberId: '', roleInGen: 'member' })
   const [addMemberLoading, setAddMemberLoading] = useState(false)
@@ -527,7 +524,6 @@ function GenerationManagement() {
         </button>
       </div>
 
-      {/* Create / Edit Form */}
       {showCreateForm && (
         <div className="p-4 rounded-lg border border-border-default bg-bg-secondary">
           <h3 className="text-sm font-semibold text-text-primary mb-4">
@@ -589,7 +585,6 @@ function GenerationManagement() {
         </div>
       )}
 
-      {/* Generation list */}
       {loading ? (
         <div className="text-sm text-text-tertiary">불러오는 중...</div>
       ) : generations.length === 0 ? (

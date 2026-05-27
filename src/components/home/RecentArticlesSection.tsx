@@ -10,7 +10,19 @@ export function RecentArticlesSection() {
   const [posts, setPosts] = useState<PostSummary[]>([])
 
   useEffect(() => {
-    getPosts({ page: 0, size: 4 }).then((data) => setPosts(data.content)).catch(() => {})
+    let ignore = false
+
+    getPosts({ page: 0, size: 4 })
+      .then((data) => {
+        if (!ignore) {
+          setPosts(data.content)
+        }
+      })
+      .catch(() => {})
+
+    return () => {
+      ignore = true
+    }
   }, [])
 
   if (posts.length === 0) return null
@@ -45,10 +57,19 @@ export function RecentArticlesSection() {
                   <h3 className="text-sm md:text-base font-medium text-text-primary group-hover:text-accent-primary transition-colors break-keep leading-snug">
                     {post.title}
                   </h3>
+
                   <div className="mt-2 flex items-center gap-2 text-xs text-text-tertiary">
                     <span className="font-mono px-1.5 py-0.5 bg-bg-tertiary rounded text-[10px]">{post.board}</span>
                     <span>&middot;</span>
                     <time className="tabular-nums">{timeAgo(post.createdAt)}</time>
+
+                    {post.tags.length > 0 && (
+                      <span className="ml-auto hidden sm:flex gap-1.5 font-mono text-[10px]">
+                        {post.tags.map((tag) => (
+                          <span key={tag}>{tag}</span>
+                        ))}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -70,3 +91,4 @@ export function RecentArticlesSection() {
     </section>
   )
 }
+

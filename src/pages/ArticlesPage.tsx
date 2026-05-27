@@ -49,6 +49,7 @@ export default function ArticlesPage() {
   ) => {
     requestSeq.current += 1
     const seq = requestSeq.current
+
     try {
       const data = await getPosts({
         board: params.board === '전체' ? undefined : params.board,
@@ -58,9 +59,10 @@ export default function ArticlesPage() {
         page: nextPage,
         size: PAGE_SIZE,
       })
+
       if (seq !== requestSeq.current) return
-      if (!append) setIsLoading(false)
-      setPosts(prev => append ? [...prev, ...data.content] : data.content)
+
+      setPosts((prev) => (append ? [...prev, ...data.content] : data.content))
       setTotalElements(data.totalElements)
       setIsLast(data.last)
       setPage(nextPage)
@@ -75,6 +77,7 @@ export default function ArticlesPage() {
     let active = true
     setIsLoading(true)
     setError(null)
+
     fetchPosts({ board, generation, authorId, keyword: debouncedKeyword }, 0, false)
       .finally(() => { if (active) setIsLoading(false) })
     return () => { active = false }

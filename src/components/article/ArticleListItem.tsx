@@ -18,6 +18,8 @@ export const ArticleListItem = memo(function ArticleListItem({
   className = '',
   style,
 }: Props) {
+  const authorLabel = post.authorName ?? post.authorEmail?.split('@')[0]
+
   return (
     <Link
       to={`/articles/${post.id}`}
@@ -37,10 +39,10 @@ export const ArticleListItem = memo(function ArticleListItem({
             <span className="font-mono px-1.5 py-0.5 bg-bg-tertiary rounded text-[10px]">{post.board}</span>
             <span>&middot;</span>
             <span>{post.category}</span>
-            {post.authorName && (
+            {authorLabel && (
               <>
                 <span>&middot;</span>
-                <span>{post.authorName}</span>
+                <span>{authorLabel}</span>
               </>
             )}
             <span>&middot;</span>

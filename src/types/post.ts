@@ -24,6 +24,7 @@ export interface PostSummary {
   generation: string
   status: PostStatus
   authorId: number
+  authorEmail: string | null
   authorName: string | null
   tags: string[]
   likeCount: number
@@ -34,8 +35,8 @@ export interface PostSummary {
 
 export interface Post extends PostSummary {
   content: string
+  repostFromId: number | null
   replyToId: number | null
-  authorName: string | null
   rejectedReason: string | null
   bookmarkCount: number
   liked: boolean
@@ -59,7 +60,9 @@ export interface PostCreateRequest {
   board: string
   category: string
   status: PostStatus
+  generation: string
   tags: string[]
+  repostFromId?: number | null
   replyToId?: number | null
 }
 
