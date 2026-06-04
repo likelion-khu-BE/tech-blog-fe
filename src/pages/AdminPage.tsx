@@ -413,24 +413,31 @@ const ROLE_OPTIONS: { value: GenerationRole; label: string }[] = [
 function GenerationManagement() {
   const [generations, setGenerations] = useState<Generation[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedGen, setSelectedGen] = useState<number | null>(null)
+
+  // 열린 패널: { genNumber, type: 'edit' | 'member' } — 하나만 열림
+  const [openPanel, setOpenPanel] = useState<{ genNumber: number; type: 'edit' | 'member' } | null>(null)
+
   const [genMembers, setGenMembers] = useState<GenerationMember[]>([])
   const [membersLoading, setMembersLoading] = useState(false)
+
+  // 기수 생성 폼 (최상단)
   const [showCreateForm, setShowCreateForm] = useState(false)
-  const [editingGen, setEditingGen] = useState<Generation | null>(null)
-  const [showAddMember, setShowAddMember] = useState(false)
-
-  // Create / edit form state
   const emptyForm: CreateGenerationRequest = { number: 0, startDate: '', endDate: null, isCurrent: false }
-  const [form, setForm] = useState<CreateGenerationRequest>(emptyForm)
-  const [formLoading, setFormLoading] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [createForm, setCreateForm] = useState<CreateGenerationRequest>(emptyForm)
+  const [createLoading, setCreateLoading] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
 
-  // Add member form
+  // 인라인 수정 폼
+  const [editForm, setEditForm] = useState<CreateGenerationRequest>(emptyForm)
+  const [editLoading, setEditLoading] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+
+  // 멤버 등록 폼
   const [allMembers, setAllMembers] = useState<{ id: number; name: string }[]>([])
   const [addMemberForm, setAddMemberForm] = useState<{ memberId: number | ''; roleInGen: GenerationRole }>({ memberId: '', roleInGen: 'member' })
   const [addMemberLoading, setAddMemberLoading] = useState(false)
   const [addMemberError, setAddMemberError] = useState<string | null>(null)
+  const [showAddMember, setShowAddMember] = useState(false)
 
   const loadGenerations = useCallback(async () => {
     setLoading(true)
@@ -444,51 +451,60 @@ function GenerationManagement() {
 
   useEffect(() => { loadGenerations() }, [loadGenerations])
 
-  useEffect(() => {
-    if (selectedGen == null) return
-    setMembersLoading(true)
-    getGenerationMembers(selectedGen)
-      .then(setGenMembers)
-      .catch(() => setGenMembers([]))
-      .finally(() => setMembersLoading(false))
-  }, [selectedGen])
-
-  function openCreate() {
-    setForm(emptyForm)
-    setFormError(null)
-    setEditingGen(null)
-    setShowCreateForm(true)
-  }
-
-  function openEdit(gen: Generation) {
-    setForm({ number: gen.number, startDate: gen.startDate, endDate: gen.endDate, isCurrent: gen.isCurrent })
-    setFormError(null)
-    setEditingGen(gen)
-    setShowCreateForm(true)
-  }
-
-  async function handleFormSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!form.startDate) return
-    setFormLoading(true)
-    setFormError(null)
-    try {
-      if (editingGen) {
-        await updateGeneration(editingGen.number, form)
-      } else {
-        await createGeneration(form)
-      }
-      setShowCreateForm(false)
-      await loadGenerations()
-    } catch {
-      setFormError(editingGen ? '기수 수정에 실패했습니다.' : '기수 생성에 실패했습니다.')
-    } finally {
-      setFormLoading(false)
+  function togglePanel(genNumber: number, type: 'edit' | 'member', gen?: Generation) {
+    if (openPanel?.genNumber === genNumber && openPanel.type === type) {
+      setOpenPanel(null)
+      return
+    }
+    setOpenPanel({ genNumber, type })
+    setShowAddMember(false)
+    setAddMemberError(null)
+    if (type === 'edit' && gen) {
+      setEditForm({ number: gen.number, startDate: gen.startDate, endDate: gen.endDate, isCurrent: gen.isCurrent })
+      setEditError(null)
+    }
+    if (type === 'member') {
+      setMembersLoading(true)
+      getGenerationMembers(genNumber)
+        .then(setGenMembers)
+        .catch(() => setGenMembers([]))
+        .finally(() => setMembersLoading(false))
     }
   }
 
-  async function openAddMember(genNumber: number) {
-    setSelectedGen(genNumber)
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!createForm.startDate) return
+    setCreateLoading(true)
+    setCreateError(null)
+    try {
+      await createGeneration(createForm)
+      setShowCreateForm(false)
+      setCreateForm(emptyForm)
+      await loadGenerations()
+    } catch {
+      setCreateError('기수 생성에 실패했습니다.')
+    } finally {
+      setCreateLoading(false)
+    }
+  }
+
+  async function handleEdit(e: React.FormEvent, genNumber: number) {
+    e.preventDefault()
+    setEditLoading(true)
+    setEditError(null)
+    try {
+      await updateGeneration(genNumber, editForm)
+      setOpenPanel(null)
+      await loadGenerations()
+    } catch {
+      setEditError('기수 수정에 실패했습니다.')
+    } finally {
+      setEditLoading(false)
+    }
+  }
+
+  async function openAddMember() {
     setAddMemberForm({ memberId: '', roleInGen: 'member' })
     setAddMemberError(null)
     if (allMembers.length === 0) {
@@ -500,14 +516,14 @@ function GenerationManagement() {
 
   async function handleAddMember(e: React.FormEvent) {
     e.preventDefault()
-    if (!addMemberForm.memberId || selectedGen == null) return
+    if (!addMemberForm.memberId || !openPanel) return
     setAddMemberLoading(true)
     setAddMemberError(null)
     try {
-      await addGenerationMember(selectedGen, { memberId: Number(addMemberForm.memberId), roleInGen: addMemberForm.roleInGen })
+      await addGenerationMember(openPanel.genNumber, { memberId: Number(addMemberForm.memberId), roleInGen: addMemberForm.roleInGen })
       setShowAddMember(false)
       setMembersLoading(true)
-      getGenerationMembers(selectedGen).then(setGenMembers).finally(() => setMembersLoading(false))
+      getGenerationMembers(openPanel.genNumber).then(setGenMembers).finally(() => setMembersLoading(false))
     } catch {
       setAddMemberError('멤버 등록에 실패했습니다.')
     } finally {
@@ -520,29 +536,26 @@ function GenerationManagement() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-text-tertiary">기수를 생성하고 멤버를 관리합니다.</p>
         <button
-          onClick={openCreate}
+          onClick={() => { setShowCreateForm((v) => !v); setCreateError(null) }}
           className="text-xs px-3 py-1.5 rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition-colors"
         >
-          + 기수 생성
+          {showCreateForm ? '취소' : '+ 기수 생성'}
         </button>
       </div>
 
-      {/* Create / Edit Form */}
+      {/* 기수 생성 폼 (최상단) */}
       {showCreateForm && (
         <div className="p-4 rounded-lg border border-border-default bg-bg-secondary">
-          <h3 className="text-sm font-semibold text-text-primary mb-4">
-            {editingGen ? `${editingGen.number}기 수정` : '새 기수 생성'}
-          </h3>
-          <form onSubmit={handleFormSubmit} className="space-y-3">
+          <h3 className="text-sm font-semibold text-text-primary mb-4">새 기수 생성</h3>
+          <form onSubmit={handleCreate} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-text-secondary mb-1">기수 번호 *</label>
                 <input
                   type="number"
-                  value={form.number || ''}
-                  onChange={(e) => setForm((p) => ({ ...p, number: Number(e.target.value) }))}
-                  disabled={!!editingGen}
-                  className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50 disabled:opacity-50"
+                  value={createForm.number || ''}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, number: Number(e.target.value) }))}
+                  className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
                   required
                 />
               </div>
@@ -550,8 +563,8 @@ function GenerationManagement() {
                 <label className="block text-xs text-text-secondary mb-1">시작일 *</label>
                 <input
                   type="date"
-                  value={form.startDate}
-                  onChange={(e) => setForm((p) => ({ ...p, startDate: e.target.value }))}
+                  value={createForm.startDate}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, startDate: e.target.value }))}
                   className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
                   required
                 />
@@ -560,8 +573,8 @@ function GenerationManagement() {
                 <label className="block text-xs text-text-secondary mb-1">종료일</label>
                 <input
                   type="date"
-                  value={form.endDate ?? ''}
-                  onChange={(e) => setForm((p) => ({ ...p, endDate: e.target.value || null }))}
+                  value={createForm.endDate ?? ''}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, endDate: e.target.value || null }))}
                   className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
                 />
               </div>
@@ -569,20 +582,20 @@ function GenerationManagement() {
                 <input
                   type="checkbox"
                   id="isCurrent"
-                  checked={form.isCurrent ?? false}
-                  onChange={(e) => setForm((p) => ({ ...p, isCurrent: e.target.checked }))}
+                  checked={createForm.isCurrent ?? false}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, isCurrent: e.target.checked }))}
                   className="w-4 h-4 accent-accent-primary"
                 />
                 <label htmlFor="isCurrent" className="text-xs text-text-secondary">현재 기수</label>
               </div>
             </div>
-            {formError && <p className="text-xs text-red-400">{formError}</p>}
+            {createError && <p className="text-xs text-red-400">{createError}</p>}
             <div className="flex gap-2 pt-1">
               <button type="button" onClick={() => setShowCreateForm(false)} className="flex-1 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors">
                 취소
               </button>
-              <button type="submit" disabled={formLoading} className="flex-1 py-2 text-sm rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-40 transition-colors">
-                {formLoading ? '저장 중...' : (editingGen ? '수정' : '생성')}
+              <button type="submit" disabled={createLoading} className="flex-1 py-2 text-sm rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-40 transition-colors">
+                {createLoading ? '생성 중...' : '생성'}
               </button>
             </div>
           </form>
@@ -596,7 +609,10 @@ function GenerationManagement() {
         <p className="text-sm text-text-tertiary">등록된 기수가 없습니다.</p>
       ) : (
         <div className="space-y-2">
-          {generations.map((gen) => (
+          {generations.map((gen) => {
+            const isEditOpen = openPanel?.genNumber === gen.number && openPanel.type === 'edit'
+            const isMemberOpen = openPanel?.genNumber === gen.number && openPanel.type === 'member'
+            return (
             <div key={gen.number} className="rounded-lg border border-border-default overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 bg-bg-secondary">
                 <div className="flex items-center gap-3">
@@ -608,26 +624,84 @@ function GenerationManagement() {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setSelectedGen(selectedGen === gen.number ? null : gen.number)}
-                    className="text-xs px-2.5 py-1 rounded border border-border-default text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50 transition-colors"
+                    onClick={() => togglePanel(gen.number, 'member')}
+                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${isMemberOpen ? 'border-accent-primary/40 text-accent-primary bg-accent-primary/10' : 'border-border-default text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50'}`}
                   >
-                    {selectedGen === gen.number ? '접기' : '멤버'}
+                    멤버
                   </button>
                   <button
-                    onClick={() => openEdit(gen)}
-                    className="text-xs px-2.5 py-1 rounded border border-border-default text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50 transition-colors"
+                    onClick={() => togglePanel(gen.number, 'edit', gen)}
+                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${isEditOpen ? 'border-accent-primary/40 text-accent-primary bg-accent-primary/10' : 'border-border-default text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50'}`}
                   >
                     수정
                   </button>
                 </div>
               </div>
 
-              {selectedGen === gen.number && (
-                <div className="px-4 pb-4 pt-3">
+              {/* 인라인 수정 폼 */}
+              {isEditOpen && (
+                <div className="px-4 pb-4 pt-3 border-t border-border-default">
+                  <form onSubmit={(e) => handleEdit(e, gen.number)} className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-text-secondary mb-1">기수 번호</label>
+                        <input
+                          type="number"
+                          value={editForm.number}
+                          disabled
+                          className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary opacity-50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-text-secondary mb-1">시작일 *</label>
+                        <input
+                          type="date"
+                          value={editForm.startDate}
+                          onChange={(e) => setEditForm((p) => ({ ...p, startDate: e.target.value }))}
+                          className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-text-secondary mb-1">종료일</label>
+                        <input
+                          type="date"
+                          value={editForm.endDate ?? ''}
+                          onChange={(e) => setEditForm((p) => ({ ...p, endDate: e.target.value || null }))}
+                          className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 mt-5">
+                        <input
+                          type="checkbox"
+                          id={`isCurrent-${gen.number}`}
+                          checked={editForm.isCurrent ?? false}
+                          onChange={(e) => setEditForm((p) => ({ ...p, isCurrent: e.target.checked }))}
+                          className="w-4 h-4 accent-accent-primary"
+                        />
+                        <label htmlFor={`isCurrent-${gen.number}`} className="text-xs text-text-secondary">현재 기수</label>
+                      </div>
+                    </div>
+                    {editError && <p className="text-xs text-red-400">{editError}</p>}
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setOpenPanel(null)} className="flex-1 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors">
+                        취소
+                      </button>
+                      <button type="submit" disabled={editLoading} className="flex-1 py-2 text-sm rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-40 transition-colors">
+                        {editLoading ? '저장 중...' : '저장'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* 인라인 멤버 목록 */}
+              {isMemberOpen && (
+                <div className="px-4 pb-4 pt-3 border-t border-border-default">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs text-text-tertiary">멤버 목록</p>
                     <button
-                      onClick={() => openAddMember(gen.number)}
+                      onClick={openAddMember}
                       className="text-xs px-2.5 py-1 rounded border border-border-default text-text-tertiary hover:text-accent-primary hover:border-accent-primary/40 transition-colors"
                     >
                       + 멤버 등록
@@ -654,7 +728,7 @@ function GenerationManagement() {
                     </div>
                   )}
 
-                  {showAddMember && selectedGen === gen.number && (
+                  {showAddMember && (
                     <form onSubmit={handleAddMember} className="mt-3 p-3 rounded-lg border border-border-default bg-bg-tertiary/30 space-y-3">
                       <p className="text-xs font-medium text-text-primary">멤버 등록</p>
                       <div className="grid grid-cols-2 gap-2">
