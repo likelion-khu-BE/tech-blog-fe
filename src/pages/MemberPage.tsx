@@ -281,25 +281,35 @@ export default function MemberPage() {
             ) : activities && activities.content.length > 0 ? (
               <>
                 <div className="space-y-2">
-                  {activities.content.map((activity) => (
-                    <Link
-                      key={activity.id}
-                      to={activity.link}
-                      className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate">
-                          {ACTIVITY_LABEL[activity.type]}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0 ml-3">
-                        <span className="text-[10px] text-accent-primary/80">+{activity.score}</span>
-                        <span className="text-[10px] text-text-tertiary">
-                          {new Date(activity.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
+                  {activities.content.map((activity) => {
+                    const resolvedLink = activity.link
+                      ? activity.link
+                          .replace(/^\/blog\/posts\//, '/articles/')
+                          .replace(/^\/qna\/questions\//, '/qna/')
+                          .replace(/^\/session\/events\//, '/sessions/')
+                      : null
+                    const cls = "flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
+                    const inner = (
+                      <>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate">
+                            {ACTIVITY_LABEL[activity.type]}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0 ml-3">
+                          <span className="text-[10px] text-accent-primary/80">+{activity.score}</span>
+                          <span className="text-[10px] text-text-tertiary">
+                            {new Date(activity.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      </>
+                    )
+                    return resolvedLink ? (
+                      <Link key={activity.id} to={resolvedLink} className={cls}>{inner}</Link>
+                    ) : (
+                      <div key={activity.id} className={cls}>{inner}</div>
+                    )
+                  })}
                 </div>
                 {(activities.totalPages > 1) && (
                   <div className="flex items-center justify-between mt-4">

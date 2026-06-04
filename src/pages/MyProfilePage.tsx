@@ -27,8 +27,12 @@ const CATEGORY_LABEL: Record<string, string> = {
   etc: '기타',
 }
 
-function resolveActivityLink(link: string): string {
-  return link.replace(/^\/blog\/posts\//, '/articles/')
+function resolveActivityLink(link: string | null): string | null {
+  if (!link) return null
+  return link
+    .replace(/^\/blog\/posts\//, '/articles/')
+    .replace(/^\/qna\/questions\//, '/qna/')
+    .replace(/^\/session\/events\//, '/sessions/')
 }
 
 const ACTIVITY_DOMAIN: Record<ActivityType, 'blog' | 'qna' | 'session'> = {
@@ -668,9 +672,16 @@ export default function MyProfilePage() {
   const [reactionsLoading, setReactionsLoading] = useState(false)
   const [activityDomain, setActivityDomain] = useState<'all' | 'blog' | 'qna' | 'session'>('all')
   const [myPosts, setMyPosts] = useState<PostSummary[]>([])
+  const [myPostsTotal, setMyPostsTotal] = useState(0)
   const [myPostsLoading, setMyPostsLoading] = useState(false)
+  const [showAllTeams, setShowAllTeams] = useState(false)
+  const [onlyLead, setOnlyLead] = useState(false)
+  const [showAllPosts, setShowAllPosts] = useState(false)
   const [bookmarks, setBookmarks] = useState<PostSummary[]>([])
+  const [bookmarksTotal, setBookmarksTotal] = useState(0)
   const [bookmarksLoading, setBookmarksLoading] = useState(false)
+  const [showAllBookmarks, setShowAllBookmarks] = useState(false)
+  const [activityLocalPage, setActivityLocalPage] = useState(0)
 
   function loadData() {
     Promise.all([getMe(), getMyTeams()])
@@ -688,7 +699,7 @@ export default function MyProfilePage() {
   useEffect(() => {
     if (!member) return
     setActivitiesLoading(true)
-    getMemberActivities(member.id, { page: activitiesPage, size: 10 })
+    getMemberActivities(member.id, { page: activitiesPage, size: 50 })
       .then(setActivities)
       .catch(() => {})
       .finally(() => setActivitiesLoading(false))
@@ -696,7 +707,7 @@ export default function MyProfilePage() {
 
   useEffect(() => {
     setReactionsLoading(true)
-    getMyReactions({ page: reactionsPage, size: 10 })
+    getMyReactions({ page: reactionsPage, size: 5 })
       .then(setReactions)
       .catch(() => {})
       .finally(() => setReactionsLoading(false))
@@ -705,7 +716,7 @@ export default function MyProfilePage() {
   useEffect(() => {
     setMyPostsLoading(true)
     getMyPosts({ size: 20 })
-      .then((p) => setMyPosts(p.content))
+      .then((p) => { setMyPosts(p.content); setMyPostsTotal(p.totalElements) })
       .catch(() => {})
       .finally(() => setMyPostsLoading(false))
   }, [])
@@ -713,7 +724,7 @@ export default function MyProfilePage() {
   useEffect(() => {
     setBookmarksLoading(true)
     getMyBookmarks({ size: 20 })
-      .then((p) => setBookmarks(p.content))
+      .then((p) => { setBookmarks(p.content); setBookmarksTotal(p.totalElements) })
       .catch(() => {})
       .finally(() => setBookmarksLoading(false))
   }, [])
@@ -833,12 +844,42 @@ export default function MyProfilePage() {
               visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
             }`}
           >
-            <h2 className="text-lg font-bold text-text-primary tracking-tight mb-5">내 팀</h2>
-            <div className="space-y-3">
-              {teams.map((t) => (
-                <MyTeamCard key={t.id} team={t} />
-              ))}
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-text-primary tracking-tight">내 팀</h2>
+              <button
+                onClick={() => { setOnlyLead((v) => !v); setShowAllTeams(false) }}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  onlyLead
+                    ? 'border-accent-primary text-accent-primary bg-accent-muted'
+                    : 'border-border-default text-text-tertiary hover:border-border-hover'
+                }`}
+              >
+                팀장만
+              </button>
             </div>
+            {(() => {
+              const sorted = [...teams]
+                .filter((t) => !onlyLead || t.isLead)
+                .sort((a, b) => (b.generation?.number ?? 0) - (a.generation?.number ?? 0))
+              const displayed = showAllTeams ? sorted : sorted.slice(0, 5)
+              return (
+                <>
+                  <div className="space-y-3">
+                    {displayed.map((t) => (
+                      <MyTeamCard key={t.id} team={t} />
+                    ))}
+                  </div>
+                  {sorted.length > 5 && (
+                    <button
+                      onClick={() => setShowAllTeams((v) => !v)}
+                      className="w-full mt-3 py-2 text-xs text-text-tertiary border border-border-default rounded-lg hover:text-text-primary hover:border-border-hover transition-colors"
+                    >
+                      {showAllTeams ? '접기' : '더보기'}
+                    </button>
+                  )}
+                </>
+              )
+            })()}
           </section>
         </>
       )}
@@ -856,7 +897,7 @@ export default function MyProfilePage() {
               {([['blog', '블로그'], ['qna', 'Q&A'], ['session', '세션']] as const).map(([key, label]) => (
                 <button
                   key={key}
-                  onClick={() => setActivityDomain((prev) => prev === key ? 'all' : key)}
+                  onClick={() => { setActivityDomain((prev) => prev === key ? 'all' : key); setActivityLocalPage(0) }}
                   className={`flex flex-col items-center gap-1 p-4 rounded-lg border transition-colors ${
                     activityDomain === key
                       ? 'bg-accent-muted border-accent-primary/40 text-accent-secondary'
@@ -874,20 +915,20 @@ export default function MyProfilePage() {
               const filtered = activities?.content.filter((a) =>
                 activityDomain === 'all' || ACTIVITY_DOMAIN[a.type] === activityDomain
               ) ?? []
+              const totalPages = Math.ceil(filtered.length / 5)
+              const displayed = filtered.slice(activityLocalPage * 5, (activityLocalPage + 1) * 5)
               return activitiesLoading && activities === null ? (
                 <p className="text-xs text-text-tertiary">불러오는 중...</p>
               ) : filtered.length > 0 ? (
                 <>
                   <div className="space-y-2">
-                    {filtered.map((activity) => {
-                      const postIdMatch = activity.link.match(/\/blog\/posts\/(\d+)/)
+                    {displayed.map((activity) => {
+                      const postIdMatch = activity.link?.match(/\/blog\/posts\/(\d+)/)
                       const postTitle = postIdMatch ? postTitleMap.get(Number(postIdMatch[1])) : undefined
-                      return (
-                        <Link
-                          key={activity.id}
-                          to={resolveActivityLink(activity.link)}
-                          className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
-                        >
+                      const resolvedLink = resolveActivityLink(activity.link)
+                      const cls = "flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
+                      const inner = (
+                        <>
                           <div className="flex flex-col min-w-0 flex-1">
                             <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate">
                               {postTitle ?? ACTIVITY_LABEL[activity.type]}
@@ -902,23 +943,28 @@ export default function MyProfilePage() {
                               {new Date(activity.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
                             </span>
                           </div>
-                        </Link>
+                        </>
+                      )
+                      return resolvedLink ? (
+                        <Link key={activity.id} to={resolvedLink} className={cls}>{inner}</Link>
+                      ) : (
+                        <div key={activity.id} className={cls}>{inner}</div>
                       )
                     })}
                   </div>
-                  {activities && activities.totalPages > 1 && activityDomain === 'all' && (
+                  {totalPages > 1 && (
                     <div className="flex items-center justify-between mt-4">
                       <button
-                        onClick={() => setActivitiesPage((p) => p - 1)}
-                        disabled={activitiesPage === 0 || activitiesLoading}
+                        onClick={() => setActivityLocalPage((p) => p - 1)}
+                        disabled={activityLocalPage === 0}
                         className="text-xs px-3 py-1.5 rounded border border-border-default text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors"
                       >
                         이전
                       </button>
-                      <span className="text-xs text-text-tertiary">{activitiesPage + 1} / {activities.totalPages}</span>
+                      <span className="text-xs text-text-tertiary">{activityLocalPage + 1} / {totalPages}</span>
                       <button
-                        onClick={() => setActivitiesPage((p) => p + 1)}
-                        disabled={!activities.hasNext || activitiesLoading}
+                        onClick={() => setActivityLocalPage((p) => p + 1)}
+                        disabled={activityLocalPage >= totalPages - 1}
                         className="text-xs px-3 py-1.5 rounded border border-border-default text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors"
                       >
                         다음
@@ -947,23 +993,28 @@ export default function MyProfilePage() {
           ) : reactions && reactions.content.length > 0 ? (
             <>
               <div className="space-y-2">
-                {reactions.content.map((activity) => (
-                  <Link
-                    key={activity.id}
-                    to={activity.link}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
-                  >
-                    <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate">
-                      {ACTIVITY_LABEL[activity.type]}
-                    </span>
-                    <div className="flex items-center gap-3 shrink-0 ml-3">
-                      <span className="text-[10px] text-accent-primary/80">+{activity.score}</span>
-                      <span className="text-[10px] text-text-tertiary">
-                        {new Date(activity.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                {reactions.content.map((activity) => {
+                  const resolvedLink = resolveActivityLink(activity.link)
+                  const cls = "flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
+                  const inner = (
+                    <>
+                      <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate flex-1">
+                        {ACTIVITY_LABEL[activity.type]}
                       </span>
-                    </div>
-                  </Link>
-                ))}
+                      <div className="flex items-center gap-3 shrink-0 ml-3">
+                        <span className="text-[10px] text-accent-primary/80">+{activity.score}</span>
+                        <span className="text-[10px] text-text-tertiary">
+                          {new Date(activity.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                    </>
+                  )
+                  return resolvedLink ? (
+                    <Link key={activity.id} to={resolvedLink} className={cls}>{inner}</Link>
+                  ) : (
+                    <div key={activity.id} className={cls}>{inner}</div>
+                  )
+                })}
               </div>
               {reactions.totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
@@ -1000,28 +1051,35 @@ export default function MyProfilePage() {
           ) : myPosts.length === 0 ? (
             <p className="text-xs text-text-tertiary">작성한 아티클이 없습니다.</p>
           ) : (
-            <div className="space-y-2">
-              {myPosts.map((post) => (
-                <Link
-                  key={post.id}
-                  to={`/articles/${post.id}`}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
+            <>
+              <div className="space-y-2">
+                {(showAllPosts ? myPosts : myPosts.slice(0, 5)).map((post) => (
+                  <Link
+                    key={post.id}
+                    to={`/articles/${post.id}`}
+                    className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
+                  >
+                    <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate flex-1 mr-3">{post.title}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${POST_STATUS_COLOR[post.status]}`}>
+                        {POST_STATUS_LABEL[post.status]}
+                      </span>
+                      <span className="text-[10px] text-text-tertiary">
+                        {new Date(post.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              {myPostsTotal > 5 && (
+                <button
+                  onClick={() => setShowAllPosts((v) => !v)}
+                  className="w-full mt-3 py-2 text-xs text-text-tertiary border border-border-default rounded-lg hover:text-text-primary hover:border-border-hover transition-colors"
                 >
-                  <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate flex-1 mr-3">{post.title}</span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${POST_STATUS_COLOR[post.status]}`}>
-                      {POST_STATUS_LABEL[post.status]}
-                    </span>
-                    {post.status === 'REJECTED' && (
-                      <span className="text-[10px] text-red-400/70">반려</span>
-                    )}
-                    <span className="text-[10px] text-text-tertiary">
-                      {new Date(post.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                  {showAllPosts ? '접기' : '더보기'}
+                </button>
+              )}
+            </>
           )}
         </section>
       </>
@@ -1035,23 +1093,33 @@ export default function MyProfilePage() {
           ) : bookmarks.length === 0 ? (
             <p className="text-xs text-text-tertiary">북마크한 아티클이 없습니다.</p>
           ) : (
-            <div className="space-y-2">
-              {bookmarks.map((post) => (
-                <Link
-                  key={post.id}
-                  to={`/articles/${post.id}`}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
+            <>
+              <div className="space-y-2">
+                {(showAllBookmarks ? bookmarks : bookmarks.slice(0, 5)).map((post) => (
+                  <Link
+                    key={post.id}
+                    to={`/articles/${post.id}`}
+                    className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
+                  >
+                    <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate flex-1 mr-3">{post.title}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] text-text-tertiary">{post.board} · {post.category}</span>
+                      <span className="text-[10px] text-text-tertiary">
+                        {new Date(post.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              {bookmarksTotal > 5 && (
+                <button
+                  onClick={() => setShowAllBookmarks((v) => !v)}
+                  className="w-full mt-3 py-2 text-xs text-text-tertiary border border-border-default rounded-lg hover:text-text-primary hover:border-border-hover transition-colors"
                 >
-                  <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate flex-1 mr-3">{post.title}</span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[10px] text-text-tertiary">{post.board} · {post.category}</span>
-                    <span className="text-[10px] text-text-tertiary">
-                      {new Date(post.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                  {showAllBookmarks ? '접기' : '더보기'}
+                </button>
+              )}
+            </>
           )}
         </section>
       </>
