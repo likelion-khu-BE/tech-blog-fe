@@ -174,8 +174,12 @@ const POST_STATUS_LABEL: Record<AdminPostStatus, string> = {
   REJECTED:       '거부됨',
 }
 
-function ArticleManagement() {
-  const [tab, setTab] = useState<AdminPostStatus>('PENDING_REVIEW')
+interface ArticleManagementProps {
+  tab: AdminPostStatus
+  setTab: (tab: AdminPostStatus) => void
+}
+
+function ArticleManagement({ tab, setTab }: ArticleManagementProps) {
   const [posts, setPosts] = useState<AdminPost[]>([])
   const [loading, setLoading] = useState(true)
   const [actionId, setActionId] = useState<number | null>(null)
@@ -367,15 +371,19 @@ function ArticleManagement() {
 
 // ── 통계 대시보드 ──
 
-const STAT_CARDS: { key: keyof AdminStats; label: string; colorClass: string }[] = [
-  { key: 'totalPosts',        label: '전체 게시글',  colorClass: 'text-accent-secondary' },
-  { key: 'pendingReviewPosts',label: '검토 대기',    colorClass: 'text-yellow-400' },
-  { key: 'publishedPosts',    label: '게시된 글',    colorClass: 'text-green-400' },
-  { key: 'rejectedPosts',     label: '거부됨',       colorClass: 'text-red-400' },
-  { key: 'totalComments',     label: '총 댓글',      colorClass: 'text-text-primary' },
+const STAT_CARDS: { key: keyof AdminStats; label: string; colorClass: string; articleTab?: AdminPostStatus }[] = [
+  { key: 'totalPosts',         label: '전체 게시글', colorClass: 'text-accent-secondary', articleTab: undefined },
+  { key: 'pendingReviewPosts', label: '검토 대기',   colorClass: 'text-yellow-400',        articleTab: 'PENDING_REVIEW' },
+  { key: 'publishedPosts',     label: '게시된 글',   colorClass: 'text-green-400',         articleTab: 'PUBLISHED' },
+  { key: 'rejectedPosts',      label: '거부됨',      colorClass: 'text-red-400',           articleTab: 'REJECTED' },
+  { key: 'totalComments',      label: '총 댓글',     colorClass: 'text-text-primary' },
 ]
 
-function StatsSection() {
+interface StatsSectionProps {
+  onNavigate: (articleTab?: AdminPostStatus) => void
+}
+
+function StatsSection({ onNavigate }: StatsSectionProps) {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -390,14 +398,21 @@ function StatsSection() {
 
   return (
     <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8 transition-opacity duration-150 ${loading ? 'opacity-40' : 'opacity-100'}`}>
-      {STAT_CARDS.map(({ key, label, colorClass }) => (
-        <div key={key} className="px-4 py-4 rounded-lg bg-bg-secondary border border-border-default">
-          <p className="text-xs text-text-tertiary mb-2">{label}</p>
-          <p className={`text-2xl font-bold ${colorClass}`}>
-            {stats ? stats[key].toLocaleString() : '—'}
-          </p>
-        </div>
-      ))}
+      {STAT_CARDS.map(({ key, label, colorClass, articleTab }) => {
+        const clickable = key !== 'totalComments'
+        return (
+          <div
+            key={key}
+            onClick={clickable ? () => onNavigate(articleTab) : undefined}
+            className={`px-4 py-4 rounded-lg bg-bg-secondary border border-border-default transition-colors ${clickable ? 'cursor-pointer hover:border-border-hover hover:bg-bg-tertiary' : ''}`}
+          >
+            <p className="text-xs text-text-tertiary mb-2">{label}</p>
+            <p className={`text-2xl font-bold ${colorClass}`}>
+              {stats ? stats[key].toLocaleString() : '—'}
+            </p>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -937,12 +952,18 @@ const SECTIONS = [
 
 export default function AdminPage() {
   const [section, setSection] = useState<'users' | 'articles' | 'generations' | 'tech-stacks'>('users')
+  const [articleTab, setArticleTab] = useState<AdminPostStatus>('PENDING_REVIEW')
+
+  function handleStatNavigate(tab?: AdminPostStatus) {
+    setSection('articles')
+    if (tab) setArticleTab(tab)
+  }
 
   return (
     <div className="max-w-[900px] mx-auto px-4 md:px-5 pt-24 pb-16">
       <h1 className="text-xl font-bold text-text-primary mb-6">관리자</h1>
 
-      <StatsSection />
+      <StatsSection onNavigate={handleStatNavigate} />
 
       <div className="flex gap-3 mb-8">
         {SECTIONS.map(({ key, label }) => (
@@ -961,7 +982,7 @@ export default function AdminPage() {
       </div>
 
       {section === 'users' && <UserManagement />}
-      {section === 'articles' && <ArticleManagement />}
+      {section === 'articles' && <ArticleManagement tab={articleTab} setTab={setArticleTab} />}
       {section === 'generations' && <GenerationManagement />}
       {section === 'tech-stacks' && <TechStackManagement />}
     </div>
