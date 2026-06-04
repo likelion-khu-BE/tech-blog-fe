@@ -54,7 +54,7 @@ export interface UpdateMemberRequest {
   name: string
   department?: string | null
   sessionType: SessionType
-  profileImageUrl?: string | null
+  profileImageKey?: string | null
   githubUrl?: string | null
   displayedEmail?: string | null
   intro?: string | null
@@ -135,7 +135,7 @@ export interface CreateTeamRequest {
   projectUrl?: string | null
   githubUrl?: string | null
   generationNumber?: number | null
-  imageUrls?: string[] | null
+  imageKeys?: string[] | null
   techStackIds?: number[] | null
 }
 
@@ -151,7 +151,8 @@ export interface UpdateTeamRequest {
   projectUrl?: string | null
   githubUrl?: string | null
   generationNumber?: number | null
-  imageUrls?: string[] | null
+  keepImageUrls?: string[] | null
+  addImageKeys?: string[] | null
   techStackIds?: number[] | null
 }
 

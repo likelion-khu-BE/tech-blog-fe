@@ -13,6 +13,8 @@ import {
   kickMember,
   leaveTeam,
   getTechStacks,
+  issueTeamImagePresignedUrls,
+  uploadToS3,
 } from '../api/profile'
 import type { TeamDetail, TeamMember, TechStack, RoleInTeam, UpdateTeamRequest } from '../types/profile'
 
@@ -45,11 +47,11 @@ function EditTeamModal({
     projectUrl: team.projectUrl,
     githubUrl: team.githubUrl,
     generationNumber: team.generation?.number ?? null,
-    imageUrls: [...team.imageUrls],
+    keepImageUrls: [...team.imageUrls],
     techStackIds: team.techStacks.map((ts) => ts.id),
   })
   const [allStacks, setAllStacks] = useState<TechStack[]>([])
-  const [imageInput, setImageInput] = useState('')
+  const [newImageFiles, setNewImageFiles] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -64,19 +66,32 @@ function EditTeamModal({
     })
   }
 
+  function handleNewImagesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    setNewImageFiles((prev) => [...prev, ...files])
+    e.target.value = ''
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.name?.trim()) return
     setSubmitting(true)
     setError(null)
     try {
+      let addImageKeys: string[] | undefined
+      if (newImageFiles.length > 0) {
+        const presigned = await issueTeamImagePresignedUrls(newImageFiles.map((f) => f.name))
+        await Promise.all(presigned.map(({ presignedUrl }, i) => uploadToS3(presignedUrl, newImageFiles[i])))
+        addImageKeys = presigned.map(({ key }) => key)
+      }
       await updateTeam(team.id, {
         name: form.name?.trim(),
         description: form.description ?? null,
         projectUrl: form.projectUrl ?? null,
         githubUrl: form.githubUrl ?? null,
         generationNumber: form.generationNumber ?? null,
-        imageUrls: form.imageUrls ?? [],
+        keepImageUrls: form.keepImageUrls ?? [],
+        addImageKeys: addImageKeys ?? [],
         techStackIds: form.techStackIds ?? [],
       })
       onSaved()
@@ -156,46 +171,38 @@ function EditTeamModal({
             />
           </div>
           <div>
-            <label className="block text-xs text-text-secondary mb-1.5">이미지 URL</label>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={imageInput}
-                onChange={(e) => setImageInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    const url = imageInput.trim()
-                    if (url) { setForm((p) => ({ ...p, imageUrls: [...(p.imageUrls ?? []), url] })); setImageInput('') }
-                  }
-                }}
-                placeholder="https://... (Enter로 추가)"
-                className="flex-1 px-3 py-2 text-sm bg-bg-secondary border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary/50 focus:outline-none focus:border-accent-primary/50 transition-colors"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const url = imageInput.trim()
-                  if (url) { setForm((p) => ({ ...p, imageUrls: [...(p.imageUrls ?? []), url] })); setImageInput('') }
-                }}
-                className="px-3 py-2 text-xs rounded-lg border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors"
-              >
-                추가
-              </button>
-            </div>
-            {(form.imageUrls ?? []).length > 0 && (
-              <ul className="mt-2 space-y-1">
-                {(form.imageUrls ?? []).map((url, i) => (
-                  <li key={i} className="flex items-center gap-2 text-xs text-text-tertiary">
-                    <span className="flex-1 truncate">{url}</span>
+            <label className="block text-xs text-text-secondary mb-1.5">이미지</label>
+            {(form.keepImageUrls ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {(form.keepImageUrls ?? []).map((url, i) => (
+                  <div key={i} className="relative group">
+                    <img src={url} alt="" className="w-16 h-16 object-cover rounded-lg border border-border-default" />
                     <button
                       type="button"
-                      onClick={() => setForm((p) => ({ ...p, imageUrls: (p.imageUrls ?? []).filter((_, j) => j !== i) }))}
-                      className="shrink-0 text-text-tertiary/50 hover:text-text-primary"
+                      onClick={() => setForm((p) => ({ ...p, keepImageUrls: (p.keepImageUrls ?? []).filter((_, j) => j !== i) }))}
+                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >✕</button>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
+            )}
+            <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors">
+              파일 추가
+              <input type="file" accept="image/*" multiple className="hidden" onChange={handleNewImagesChange} />
+            </label>
+            {newImageFiles.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {newImageFiles.map((file, i) => (
+                  <div key={i} className="relative group">
+                    <img src={URL.createObjectURL(file)} alt={file.name} className="w-16 h-16 object-cover rounded-lg border border-border-default" />
+                    <button
+                      type="button"
+                      onClick={() => setNewImageFiles((prev) => prev.filter((_, j) => j !== i))}
+                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >✕</button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
           {allStacks.length > 0 && (
