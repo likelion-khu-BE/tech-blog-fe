@@ -399,7 +399,7 @@ function StatsSection({ onNavigate }: StatsSectionProps) {
   return (
     <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8 transition-opacity duration-150 ${loading ? 'opacity-40' : 'opacity-100'}`}>
       {STAT_CARDS.map(({ key, label, colorClass, articleTab }) => {
-        const clickable = key !== 'totalComments'
+        const clickable = key !== 'totalComments' && key !== 'totalPosts'
         return (
           <div
             key={key}
