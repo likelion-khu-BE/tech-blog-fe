@@ -1,4 +1,4 @@
-export type PostStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'REJECTED'
+export type PostStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'REJECTED' | 'HIDDEN'
 
 export const BOARDS = ['백엔드', '프론트엔드', 'AI/ML'] as const
 export type Board = (typeof BOARDS)[number]

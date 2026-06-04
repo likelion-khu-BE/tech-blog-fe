@@ -4,7 +4,9 @@ import { usePageTransition } from '../hooks/usePageTransition'
 import { useAuth } from '../contexts/AuthContext'
 import { getMe, updateMe, getMyTeams, getTechStacks, updateMyTechStacks, getGenerations, createGeneration, updateGeneration, getMyReactions, getMemberStats, getMemberActivities, issueProfileImagePresignedUrl, uploadToS3 } from '../api/profile'
 import { getUsers, approveUser, rejectUser, type UserResponse } from '../api/admin'
+import { getMyPosts, getMyBookmarks } from '../api/posts'
 import type { MemberDetail, MyTeam, UpdateMemberRequest, SessionType, RoleInTeam, TechStack, MemberTechStack, Generation, CreateGenerationRequest, ActivityPage, ActivityType, MemberStats } from '../types/profile'
+import type { PostSummary, PostStatus } from '../types/post'
 
 const SESSION_OPTIONS: { value: SessionType; label: string }[] = [
   { value: 'backend', label: '백엔드' },
@@ -23,6 +25,22 @@ const CATEGORY_LABEL: Record<string, string> = {
   tool: '도구',
   infra: '인프라',
   etc: '기타',
+}
+
+const POST_STATUS_LABEL: Record<PostStatus, string> = {
+  DRAFT: '임시저장',
+  PENDING_REVIEW: '심사 중',
+  PUBLISHED: '공개',
+  REJECTED: '반려됨',
+  HIDDEN: '숨겨짐',
+}
+
+const POST_STATUS_COLOR: Record<PostStatus, string> = {
+  DRAFT: 'text-text-tertiary bg-bg-tertiary',
+  PENDING_REVIEW: 'text-yellow-400 bg-yellow-400/10',
+  PUBLISHED: 'text-green-400 bg-green-400/10',
+  REJECTED: 'text-red-400 bg-red-400/10',
+  HIDDEN: 'text-text-tertiary bg-bg-tertiary',
 }
 
 const ACTIVITY_LABEL: Record<ActivityType, string> = {
@@ -638,6 +656,10 @@ export default function MyProfilePage() {
   const [reactions, setReactions] = useState<ActivityPage | null>(null)
   const [reactionsPage, setReactionsPage] = useState(0)
   const [reactionsLoading, setReactionsLoading] = useState(false)
+  const [myPosts, setMyPosts] = useState<PostSummary[]>([])
+  const [myPostsLoading, setMyPostsLoading] = useState(false)
+  const [bookmarks, setBookmarks] = useState<PostSummary[]>([])
+  const [bookmarksLoading, setBookmarksLoading] = useState(false)
 
   function loadData() {
     Promise.all([getMe(), getMyTeams()])
@@ -668,6 +690,22 @@ export default function MyProfilePage() {
       .catch(() => {})
       .finally(() => setReactionsLoading(false))
   }, [reactionsPage])
+
+  useEffect(() => {
+    setMyPostsLoading(true)
+    getMyPosts({ size: 20 })
+      .then((p) => setMyPosts(p.content))
+      .catch(() => {})
+      .finally(() => setMyPostsLoading(false))
+  }, [])
+
+  useEffect(() => {
+    setBookmarksLoading(true)
+    getMyBookmarks({ size: 20 })
+      .then((p) => setBookmarks(p.content))
+      .catch(() => {})
+      .finally(() => setBookmarksLoading(false))
+  }, [])
 
   if (loading) {
     return (
@@ -915,6 +953,71 @@ export default function MyProfilePage() {
             </>
           ) : (
             <p className="text-xs text-text-tertiary">아직 반응 활동이 없습니다.</p>
+          )}
+        </section>
+      </>
+
+      <>
+        <div className="max-w-[700px] mx-auto px-4 md:px-5"><div className="h-px bg-border-default" /></div>
+        <section className={`max-w-[700px] mx-auto px-4 md:px-5 py-12 transition-all duration-700 delay-200 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          <h2 className="text-lg font-bold text-text-primary tracking-tight mb-5">내 아티클</h2>
+          {myPostsLoading ? (
+            <p className="text-xs text-text-tertiary">불러오는 중...</p>
+          ) : myPosts.length === 0 ? (
+            <p className="text-xs text-text-tertiary">작성한 아티클이 없습니다.</p>
+          ) : (
+            <div className="space-y-2">
+              {myPosts.map((post) => (
+                <Link
+                  key={post.id}
+                  to={`/articles/${post.id}`}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
+                >
+                  <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate flex-1 mr-3">{post.title}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${POST_STATUS_COLOR[post.status]}`}>
+                      {POST_STATUS_LABEL[post.status]}
+                    </span>
+                    {post.status === 'REJECTED' && (
+                      <span className="text-[10px] text-red-400/70">반려</span>
+                    )}
+                    <span className="text-[10px] text-text-tertiary">
+                      {new Date(post.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      </>
+
+      <>
+        <div className="max-w-[700px] mx-auto px-4 md:px-5"><div className="h-px bg-border-default" /></div>
+        <section className={`max-w-[700px] mx-auto px-4 md:px-5 py-12 transition-all duration-700 delay-250 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          <h2 className="text-lg font-bold text-text-primary tracking-tight mb-5">북마크</h2>
+          {bookmarksLoading ? (
+            <p className="text-xs text-text-tertiary">불러오는 중...</p>
+          ) : bookmarks.length === 0 ? (
+            <p className="text-xs text-text-tertiary">북마크한 아티클이 없습니다.</p>
+          ) : (
+            <div className="space-y-2">
+              {bookmarks.map((post) => (
+                <Link
+                  key={post.id}
+                  to={`/articles/${post.id}`}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
+                >
+                  <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate flex-1 mr-3">{post.title}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[10px] text-text-tertiary">{post.board} · {post.category}</span>
+                    <span className="text-[10px] text-text-tertiary">
+                      {new Date(post.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
           )}
         </section>
       </>
