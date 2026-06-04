@@ -665,7 +665,7 @@ export default function MyProfilePage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [stats, setStats] = useState<MemberStats | null>(null)
   const [activities, setActivities] = useState<ActivityPage | null>(null)
-  const [activitiesPage, setActivitiesPage] = useState(0)
+  const [activitiesPage] = useState(0)
   const [activitiesLoading, setActivitiesLoading] = useState(false)
   const [reactions, setReactions] = useState<ActivityPage | null>(null)
   const [reactionsPage, setReactionsPage] = useState(0)
