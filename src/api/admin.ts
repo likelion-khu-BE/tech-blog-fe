@@ -6,8 +6,8 @@ export interface UserResponse {
   id: number
   memberId: number | null
   email: string
-  role: 'ADMIN' | 'MEMBER'
-  status: 'PENDING' | 'ACTIVE' | 'REJECTED' | 'EXPIRED'
+  role: 'PRESIDENT' | 'ADMIN' | 'MEMBER'
+  status: 'PENDING' | 'ACTIVE' | 'ALUMNI' | 'REJECTED' | 'EXPIRED'
   signupRequestedAt: string
   approvedAt: string | null
 }
@@ -27,6 +27,20 @@ export async function approveUser(id: number): Promise<UserResponse> {
 export async function rejectUser(id: number): Promise<UserResponse> {
   const { data } = await client.post<UserResponse>(`/api/admin/users/${id}/reject`)
   return data
+}
+
+// ── PRESIDENT 전용 권한 관리 ──
+
+export async function grantAdmin(userId: number): Promise<void> {
+  await client.post(`/api/admin/users/${userId}/grant-admin`)
+}
+
+export async function revokeAdmin(userId: number): Promise<void> {
+  await client.post(`/api/admin/users/${userId}/revoke-admin`)
+}
+
+export async function transferPresident(userId: number): Promise<void> {
+  await client.post(`/api/admin/users/${userId}/transfer-president`)
 }
 
 // ── 아티클 관리 ──
@@ -71,8 +85,22 @@ export async function rejectPost(id: number, reason: string): Promise<AdminPost>
   return data
 }
 
+export async function hidePost(postId: number): Promise<void> {
+  await client.patch(`/api/blog/admin/posts/${postId}/hide`)
+}
+
 export async function deletePost(id: number): Promise<void> {
   await client.delete(`/api/blog/admin/posts/${id}`)
+}
+
+// ── 댓글 관리 ──
+
+export async function hideComment(commentId: number): Promise<void> {
+  await client.patch(`/api/blog/admin/comments/${commentId}/hide`)
+}
+
+export async function forceDeleteComment(commentId: number): Promise<void> {
+  await client.delete(`/api/blog/admin/comments/${commentId}`)
 }
 
 // ── 통계 ──
