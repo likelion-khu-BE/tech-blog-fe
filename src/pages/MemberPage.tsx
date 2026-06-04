@@ -65,7 +65,7 @@ function TechStackBadge({ stack }: { stack: MemberTechStack }) {
           {Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
-              className={`w-1 h-1 rounded-full ${i < stack.proficiency! ? 'bg-accent-primary' : 'bg-bg-tertiary'}`}
+              className={`w-1 h-1 rounded-full ${i < stack.proficiency! ? 'bg-purple-400' : 'bg-bg-tertiary'}`}
             />
           ))}
         </div>
