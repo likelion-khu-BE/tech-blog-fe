@@ -296,7 +296,7 @@ function EditProfileModal({
                                   onClick={() => setProficiency(s.id, n)}
                                   className={`text-[10px] transition-colors ${
                                     sel.proficiency != null && n <= sel.proficiency
-                                      ? 'text-accent-primary'
+                                      ? 'text-purple-400'
                                       : 'text-text-tertiary/30'
                                   }`}
                                 >
@@ -768,7 +768,7 @@ export default function MyProfilePage() {
                     </span>
                   )}
                   {ts.name}
-                  {ts.proficiency != null && <span className="ml-1 text-text-tertiary/60">{'●'.repeat(ts.proficiency)}{'○'.repeat(5 - ts.proficiency)}</span>}
+                  {ts.proficiency != null && <span className="ml-1"><span className="text-purple-400">{'●'.repeat(ts.proficiency)}</span><span className="text-text-tertiary/30">{'○'.repeat(5 - ts.proficiency)}</span></span>}
                 </span>
               ))}
             </div>
