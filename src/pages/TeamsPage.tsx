@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { usePageTransition } from '../hooks/usePageTransition'
 import { useAuth } from '../contexts/AuthContext'
-import { getTeams, getMyTeams, createTeam, getTechStacks, joinTeam, getGenerations } from '../api/profile'
+import { getTeams, getMyTeams, createTeam, getTechStacks, joinTeam, getGenerations, issueTeamImagePresignedUrls, uploadToS3 } from '../api/profile'
 import type { TeamSummary, MyTeam, TechStack, CreateTeamRequest, Generation } from '../types/profile'
 
 function TeamCard({ team }: { team: TeamSummary }) {
@@ -63,7 +63,6 @@ const EMPTY_FORM: CreateTeamRequest = {
   githubUrl: '',
   generationNumber: null,
   techStackIds: [],
-  imageUrls: [],
 }
 
 function CreateTeamModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: number) => void }) {
@@ -71,7 +70,7 @@ function CreateTeamModal({ onClose, onCreated }: { onClose: () => void; onCreate
   const [techStacks, setTechStacks] = useState<TechStack[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [imageUrlInput, setImageUrlInput] = useState('')
+  const [imageFiles, setImageFiles] = useState<File[]>([])
 
   useEffect(() => {
     getTechStacks().then((res) => setTechStacks(res.techStacks)).catch(() => {})
@@ -87,19 +86,31 @@ function CreateTeamModal({ onClose, onCreated }: { onClose: () => void; onCreate
     })
   }
 
+  function handleImageFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    setImageFiles((prev) => [...prev, ...files])
+    e.target.value = ''
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.name.trim()) return
     setSubmitting(true)
     setError(null)
     try {
+      let imageKeys: string[] | undefined
+      if (imageFiles.length > 0) {
+        const presigned = await issueTeamImagePresignedUrls(imageFiles.map((f) => f.name))
+        await Promise.all(presigned.map(({ presignedUrl }, i) => uploadToS3(presignedUrl, imageFiles[i])))
+        imageKeys = presigned.map(({ key }) => key)
+      }
       const body: CreateTeamRequest = { name: form.name.trim() }
       if (form.description) body.description = form.description
       if (form.projectUrl) body.projectUrl = form.projectUrl
       if (form.githubUrl) body.githubUrl = form.githubUrl
       if (form.generationNumber != null) body.generationNumber = form.generationNumber
       if (form.techStackIds?.length) body.techStackIds = form.techStackIds
-      if (form.imageUrls?.length) body.imageUrls = form.imageUrls
+      if (imageKeys?.length) body.imageKeys = imageKeys
       const res = await createTeam(body)
       onCreated(res.id)
     } catch {
@@ -188,54 +199,24 @@ function CreateTeamModal({ onClose, onCreated }: { onClose: () => void; onCreate
           </div>
 
           <div>
-            <label className="block text-xs text-text-secondary mb-1.5">이미지 URL</label>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={imageUrlInput}
-                onChange={(e) => setImageUrlInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    const url = imageUrlInput.trim()
-                    if (url) {
-                      setForm((p) => ({ ...p, imageUrls: [...(p.imageUrls ?? []), url] }))
-                      setImageUrlInput('')
-                    }
-                  }
-                }}
-                placeholder="https://... (Enter로 추가)"
-                className="flex-1 px-3 py-2 text-sm bg-bg-secondary border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary/50 focus:outline-none focus:border-accent-primary/50 transition-colors"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const url = imageUrlInput.trim()
-                  if (url) {
-                    setForm((p) => ({ ...p, imageUrls: [...(p.imageUrls ?? []), url] }))
-                    setImageUrlInput('')
-                  }
-                }}
-                className="px-3 py-2 text-xs rounded-lg border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors"
-              >
-                추가
-              </button>
-            </div>
-            {(form.imageUrls ?? []).length > 0 && (
-              <ul className="mt-2 space-y-1">
-                {(form.imageUrls ?? []).map((url, i) => (
-                  <li key={i} className="flex items-center gap-2 text-xs text-text-tertiary">
-                    <span className="flex-1 truncate">{url}</span>
+            <label className="block text-xs text-text-secondary mb-1.5">이미지</label>
+            <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors">
+              파일 선택 (복수 가능)
+              <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageFilesChange} />
+            </label>
+            {imageFiles.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {imageFiles.map((file, i) => (
+                  <div key={i} className="relative group">
+                    <img src={URL.createObjectURL(file)} alt={file.name} className="w-16 h-16 object-cover rounded-lg border border-border-default" />
                     <button
                       type="button"
-                      onClick={() => setForm((p) => ({ ...p, imageUrls: (p.imageUrls ?? []).filter((_, j) => j !== i) }))}
-                      className="shrink-0 text-text-tertiary/50 hover:text-text-primary transition-colors"
-                    >
-                      ✕
-                    </button>
-                  </li>
+                      onClick={() => setImageFiles((prev) => prev.filter((_, j) => j !== i))}
+                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >✕</button>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
 

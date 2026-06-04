@@ -28,6 +28,20 @@ import type {
   RankingPeriod,
 } from '../types/profile'
 
+// ── S3 Upload Helpers ──
+
+export async function issueProfileImagePresignedUrl(filename: string): Promise<{ presignedUrl: string; key: string }> {
+  return client.post('/api/profile/members/me/profile-image/presigned-url', null, { params: { filename } }).then((r) => r.data)
+}
+
+export async function issueTeamImagePresignedUrls(filenames: string[]): Promise<{ presignedUrl: string; key: string }[]> {
+  return client.post('/api/profile/teams/images/presigned-urls', { filenames }).then((r) => r.data)
+}
+
+export async function uploadToS3(presignedUrl: string, file: File): Promise<void> {
+  await fetch(presignedUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
+}
+
 // ── Members ──
 
 export function getMe(): Promise<MemberDetail> {

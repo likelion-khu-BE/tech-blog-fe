@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { usePageTransition } from '../hooks/usePageTransition'
 import { useAuth } from '../contexts/AuthContext'
-import { getMe, updateMe, getMyTeams, getTechStacks, updateMyTechStacks, getGenerations, createGeneration, updateGeneration, getMyReactions, getMemberStats, getMemberActivities } from '../api/profile'
+import { getMe, updateMe, getMyTeams, getTechStacks, updateMyTechStacks, getGenerations, createGeneration, updateGeneration, getMyReactions, getMemberStats, getMemberActivities, issueProfileImagePresignedUrl, uploadToS3 } from '../api/profile'
 import { getUsers, approveUser, rejectUser, type UserResponse } from '../api/admin'
 import type { MemberDetail, MyTeam, UpdateMemberRequest, SessionType, RoleInTeam, TechStack, MemberTechStack, Generation, CreateGenerationRequest, ActivityPage, ActivityType, MemberStats } from '../types/profile'
 
@@ -82,12 +82,13 @@ function EditProfileModal({
     name: member.name,
     department: member.department,
     sessionType: member.sessionType,
-    profileImageUrl: member.profileImageUrl,
     githubUrl: member.githubUrl,
     displayedEmail: member.displayedEmail,
     intro: member.intro,
     linksJson: member.linksJson,
   })
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(member.profileImageUrl)
   const [linkEntries, setLinkEntries] = useState<{ key: string; value: string }[]>(
     Object.entries(links).map(([key, value]) => ({ key, value }))
   )
@@ -126,6 +127,13 @@ function EditProfileModal({
     setLinkEntries((prev) => prev.map((entry, j) => j === i ? { ...entry, [field]: val } : entry))
   }
 
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.name.trim()) return
@@ -134,16 +142,22 @@ function EditProfileModal({
     const linksObj = Object.fromEntries(linkEntries.filter((e) => e.key.trim() && e.value.trim()).map((e) => [e.key, e.value]))
     const linksJson = stringifyLinks(linksObj) || null
     try {
+      let profileImageKey: string | null = null
+      if (imageFile) {
+        const { presignedUrl, key } = await issueProfileImagePresignedUrl(imageFile.name)
+        await uploadToS3(presignedUrl, imageFile)
+        profileImageKey = key
+      }
       await Promise.all([
         updateMe({
           ...form,
           name: form.name.trim(),
           department: form.department?.trim() || null,
           githubUrl: form.githubUrl?.trim() || null,
-          profileImageUrl: form.profileImageUrl?.trim() || null,
           displayedEmail: form.displayedEmail?.trim() || null,
           intro: form.intro?.trim() || null,
           linksJson,
+          profileImageKey,
         }),
         updateMyTechStacks(selectedStacks.map((s) => ({ techStackId: s.techStackId, proficiency: s.proficiency }))),
       ])
@@ -201,14 +215,20 @@ function EditProfileModal({
             </select>
           </div>
           <div>
-            <label className="block text-xs text-text-secondary mb-1.5">프로필 이미지 URL</label>
-            <input
-              type="url"
-              value={form.profileImageUrl ?? ''}
-              onChange={(e) => setForm((p) => ({ ...p, profileImageUrl: e.target.value }))}
-              placeholder="https://"
-              className="w-full px-3 py-2 text-sm bg-bg-secondary border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary/50 focus:outline-none focus:border-accent-primary/50 transition-colors"
-            />
+            <label className="block text-xs text-text-secondary mb-1.5">프로필 이미지</label>
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-full bg-bg-tertiary border border-border-default overflow-hidden shrink-0 flex items-center justify-center">
+                {imagePreview
+                  ? <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
+                  : <span className="text-xl text-text-tertiary">{form.name.slice(0, 1)}</span>
+                }
+              </div>
+              <label className="cursor-pointer px-3 py-1.5 text-xs rounded-lg border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors">
+                파일 선택
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              </label>
+              {imageFile && <span className="text-xs text-text-tertiary truncate max-w-[120px]">{imageFile.name}</span>}
+            </div>
           </div>
           <div>
             <label className="block text-xs text-text-secondary mb-1.5">GitHub URL</label>
