@@ -31,6 +31,12 @@ function resolveActivityLink(link: string): string {
   return link.replace(/^\/blog\/posts\//, '/articles/')
 }
 
+const ACTIVITY_DOMAIN: Record<ActivityType, 'blog' | 'qna' | 'session'> = {
+  blog_post: 'blog', blog_comment: 'blog', blog_post_like: 'blog', blog_post_like_received: 'blog',
+  qna_question: 'qna', qna_answer: 'qna', qna_accepted: 'qna', qna_answer_upvote: 'qna', qna_answer_downvote: 'qna', qna_comment: 'qna',
+  session_speak: 'session', session_event_post: 'session', session_event_comment: 'session', session_event_post_like: 'session', session_event_post_like_received: 'session',
+}
+
 const POST_STATUS_LABEL: Record<PostStatus, string> = {
   DRAFT: '임시저장',
   PENDING_REVIEW: '심사 중',
@@ -660,6 +666,7 @@ export default function MyProfilePage() {
   const [reactions, setReactions] = useState<ActivityPage | null>(null)
   const [reactionsPage, setReactionsPage] = useState(0)
   const [reactionsLoading, setReactionsLoading] = useState(false)
+  const [activityDomain, setActivityDomain] = useState<'all' | 'blog' | 'qna' | 'session'>('all')
   const [myPosts, setMyPosts] = useState<PostSummary[]>([])
   const [myPostsLoading, setMyPostsLoading] = useState(false)
   const [bookmarks, setBookmarks] = useState<PostSummary[]>([])
@@ -845,61 +852,84 @@ export default function MyProfilePage() {
             }`}
           >
             <h2 className="text-lg font-bold text-text-primary tracking-tight mb-6">활동</h2>
-            <div className="grid grid-cols-3 gap-3 mb-8">
+            <div className="grid grid-cols-3 gap-3 mb-6">
               {([['blog', '블로그'], ['qna', 'Q&A'], ['session', '세션']] as const).map(([key, label]) => (
-                <div key={key} className="flex flex-col items-center gap-1 p-4 rounded-lg bg-bg-secondary border border-border-default">
-                  <span className="text-2xl font-bold text-text-primary">{stats[key]}</span>
-                  <span className="text-xs text-text-tertiary">{label}</span>
-                </div>
+                <button
+                  key={key}
+                  onClick={() => setActivityDomain((prev) => prev === key ? 'all' : key)}
+                  className={`flex flex-col items-center gap-1 p-4 rounded-lg border transition-colors ${
+                    activityDomain === key
+                      ? 'bg-accent-muted border-accent-primary/40 text-accent-secondary'
+                      : 'bg-bg-secondary border-border-default hover:border-border-hover'
+                  }`}
+                >
+                  <span className={`text-2xl font-bold ${activityDomain === key ? 'text-accent-secondary' : 'text-text-primary'}`}>{stats[key]}</span>
+                  <span className={`text-xs ${activityDomain === key ? 'text-accent-secondary/80' : 'text-text-tertiary'}`}>{label}</span>
+                </button>
               ))}
             </div>
 
-            {activitiesLoading && activities === null ? (
-              <p className="text-xs text-text-tertiary">불러오는 중...</p>
-            ) : activities && activities.content.length > 0 ? (
-              <>
-                <div className="space-y-2">
-                  {activities.content.map((activity) => (
-                    <Link
-                      key={activity.id}
-                      to={resolveActivityLink(activity.link)}
-                      className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
-                    >
-                      <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate">
-                        {ACTIVITY_LABEL[activity.type]}
-                      </span>
-                      <div className="flex items-center gap-3 shrink-0 ml-3">
-                        <span className="text-[10px] text-accent-primary/80">+{activity.score}</span>
-                        <span className="text-[10px] text-text-tertiary">
-                          {new Date(activity.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-                {activities.totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-4">
-                    <button
-                      onClick={() => setActivitiesPage((p) => p - 1)}
-                      disabled={activitiesPage === 0 || activitiesLoading}
-                      className="text-xs px-3 py-1.5 rounded border border-border-default text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors"
-                    >
-                      이전
-                    </button>
-                    <span className="text-xs text-text-tertiary">{activitiesPage + 1} / {activities.totalPages}</span>
-                    <button
-                      onClick={() => setActivitiesPage((p) => p + 1)}
-                      disabled={!activities.hasNext || activitiesLoading}
-                      className="text-xs px-3 py-1.5 rounded border border-border-default text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors"
-                    >
-                      다음
-                    </button>
+            {(() => {
+              const postTitleMap = new Map(myPosts.map((p) => [p.id, p.title]))
+              const filtered = activities?.content.filter((a) =>
+                activityDomain === 'all' || ACTIVITY_DOMAIN[a.type] === activityDomain
+              ) ?? []
+              return activitiesLoading && activities === null ? (
+                <p className="text-xs text-text-tertiary">불러오는 중...</p>
+              ) : filtered.length > 0 ? (
+                <>
+                  <div className="space-y-2">
+                    {filtered.map((activity) => {
+                      const postIdMatch = activity.link.match(/\/blog\/posts\/(\d+)/)
+                      const postTitle = postIdMatch ? postTitleMap.get(Number(postIdMatch[1])) : undefined
+                      return (
+                        <Link
+                          key={activity.id}
+                          to={resolveActivityLink(activity.link)}
+                          className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
+                        >
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate">
+                              {postTitle ?? ACTIVITY_LABEL[activity.type]}
+                            </span>
+                            {postTitle && (
+                              <span className="text-[10px] text-text-tertiary/60">{ACTIVITY_LABEL[activity.type]}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0 ml-3">
+                            <span className="text-[10px] text-accent-primary/80">+{activity.score}</span>
+                            <span className="text-[10px] text-text-tertiary">
+                              {new Date(activity.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                        </Link>
+                      )
+                    })}
                   </div>
-                )}
-              </>
-            ) : (
-              <p className="text-xs text-text-tertiary">아직 활동이 없습니다.</p>
-            )}
+                  {activities && activities.totalPages > 1 && activityDomain === 'all' && (
+                    <div className="flex items-center justify-between mt-4">
+                      <button
+                        onClick={() => setActivitiesPage((p) => p - 1)}
+                        disabled={activitiesPage === 0 || activitiesLoading}
+                        className="text-xs px-3 py-1.5 rounded border border-border-default text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors"
+                      >
+                        이전
+                      </button>
+                      <span className="text-xs text-text-tertiary">{activitiesPage + 1} / {activities.totalPages}</span>
+                      <button
+                        onClick={() => setActivitiesPage((p) => p + 1)}
+                        disabled={!activities.hasNext || activitiesLoading}
+                        className="text-xs px-3 py-1.5 rounded border border-border-default text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors"
+                      >
+                        다음
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-text-tertiary">아직 활동이 없습니다.</p>
+              )
+            })()}
           </section>
         </>
       )}
