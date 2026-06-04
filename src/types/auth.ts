@@ -1,5 +1,8 @@
 // 백엔드 응답 타입 (Java DTO 미러링)
 
+export type UserRole = 'PRESIDENT' | 'ADMIN' | 'MEMBER'
+export type UserStatus = 'PENDING' | 'ACTIVE' | 'ALUMNI'
+
 export interface LoginResponse {
   accessToken: string
   tokenType: string
@@ -8,7 +11,7 @@ export interface LoginResponse {
 export interface SignupResponse {
   userId: number
   email: string
-  status: 'PENDING' | 'ACTIVE'
+  status: UserStatus
 }
 
 export interface TokenRefreshResponse {
@@ -34,7 +37,7 @@ export interface SignupRequest {
 
 export interface AuthState {
   isAuthenticated: boolean
-  isLoading: boolean // 초기 silent refresh 시도 중 true
+  isLoading: boolean
   userId: number | null
-  role: 'ADMIN' | 'MEMBER' | null
+  role: UserRole | null
 }
