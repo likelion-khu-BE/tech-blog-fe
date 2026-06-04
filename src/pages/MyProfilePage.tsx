@@ -27,6 +27,10 @@ const CATEGORY_LABEL: Record<string, string> = {
   etc: '기타',
 }
 
+function resolveActivityLink(link: string): string {
+  return link.replace(/^\/blog\/posts\//, '/articles/')
+}
+
 const POST_STATUS_LABEL: Record<PostStatus, string> = {
   DRAFT: '임시저장',
   PENDING_REVIEW: '심사 중',
@@ -858,7 +862,7 @@ export default function MyProfilePage() {
                   {activities.content.map((activity) => (
                     <Link
                       key={activity.id}
-                      to={activity.link}
+                      to={resolveActivityLink(activity.link)}
                       className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-bg-secondary border border-border-default hover:border-accent-primary/40 transition-colors group"
                     >
                       <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors truncate">
