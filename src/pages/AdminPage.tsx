@@ -613,161 +613,95 @@ function GenerationManagement() {
             const isEditOpen = openPanel?.genNumber === gen.number && openPanel.type === 'edit'
             const isMemberOpen = openPanel?.genNumber === gen.number && openPanel.type === 'member'
             return (
-            <div key={gen.number} className="rounded-lg border border-border-default overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 bg-bg-secondary">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-text-primary">{gen.number}기</span>
-                  {gen.isCurrent && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent-primary/15 text-accent-primary">현재</span>
-                  )}
-                  <span className="text-xs text-text-tertiary">{gen.startDate}{gen.endDate ? ` ~ ${gen.endDate}` : ' ~ 진행중'}</span>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => togglePanel(gen.number, 'member')}
-                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${isMemberOpen ? 'border-accent-primary/40 text-accent-primary bg-accent-primary/10' : 'border-border-default text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50'}`}
-                  >
-                    멤버
-                  </button>
-                  <button
-                    onClick={() => togglePanel(gen.number, 'edit', gen)}
-                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${isEditOpen ? 'border-accent-primary/40 text-accent-primary bg-accent-primary/10' : 'border-border-default text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50'}`}
-                  >
-                    수정
-                  </button>
-                </div>
-              </div>
-
-              {/* 인라인 수정 폼 */}
-              {isEditOpen && (
-                <div className="px-4 pb-4 pt-3 border-t border-border-default">
-                  <form onSubmit={(e) => handleEdit(e, gen.number)} className="space-y-3">
+              <div key={gen.number} className="rounded-lg border border-border-default bg-bg-secondary overflow-hidden">
+                {isEditOpen ? (
+                  <form onSubmit={(e) => handleEdit(e, gen.number)} className="px-4 py-3 space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-text-secondary mb-1">기수 번호</label>
-                        <input
-                          type="number"
-                          value={editForm.number}
-                          disabled
-                          className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary opacity-50"
-                        />
+                        <input type="number" value={editForm.number} disabled className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary opacity-50" />
                       </div>
                       <div>
                         <label className="block text-xs text-text-secondary mb-1">시작일 *</label>
-                        <input
-                          type="date"
-                          value={editForm.startDate}
-                          onChange={(e) => setEditForm((p) => ({ ...p, startDate: e.target.value }))}
-                          className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
-                          required
-                        />
+                        <input type="date" value={editForm.startDate} onChange={(e) => setEditForm((p) => ({ ...p, startDate: e.target.value }))} className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50" required />
                       </div>
                       <div>
                         <label className="block text-xs text-text-secondary mb-1">종료일</label>
-                        <input
-                          type="date"
-                          value={editForm.endDate ?? ''}
-                          onChange={(e) => setEditForm((p) => ({ ...p, endDate: e.target.value || null }))}
-                          className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
-                        />
+                        <input type="date" value={editForm.endDate ?? ''} onChange={(e) => setEditForm((p) => ({ ...p, endDate: e.target.value || null }))} className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50" />
                       </div>
                       <div className="flex items-center gap-2 mt-5">
-                        <input
-                          type="checkbox"
-                          id={`isCurrent-${gen.number}`}
-                          checked={editForm.isCurrent ?? false}
-                          onChange={(e) => setEditForm((p) => ({ ...p, isCurrent: e.target.checked }))}
-                          className="w-4 h-4 accent-accent-primary"
-                        />
+                        <input type="checkbox" id={`isCurrent-${gen.number}`} checked={editForm.isCurrent ?? false} onChange={(e) => setEditForm((p) => ({ ...p, isCurrent: e.target.checked }))} className="w-4 h-4 accent-accent-primary" />
                         <label htmlFor={`isCurrent-${gen.number}`} className="text-xs text-text-secondary">현재 기수</label>
                       </div>
                     </div>
                     {editError && <p className="text-xs text-red-400">{editError}</p>}
                     <div className="flex gap-2">
-                      <button type="button" onClick={() => setOpenPanel(null)} className="flex-1 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors">
-                        취소
-                      </button>
-                      <button type="submit" disabled={editLoading} className="flex-1 py-2 text-sm rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-40 transition-colors">
-                        {editLoading ? '저장 중...' : '저장'}
-                      </button>
+                      <button type="button" onClick={() => setOpenPanel(null)} className="flex-1 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors">취소</button>
+                      <button type="submit" disabled={editLoading} className="flex-1 py-2 text-sm rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-40 transition-colors">{editLoading ? '저장 중...' : '저장'}</button>
                     </div>
                   </form>
-                </div>
-              )}
-
-              {/* 인라인 멤버 목록 */}
-              {isMemberOpen && (
-                <div className="px-4 pb-4 pt-3 border-t border-border-default">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs text-text-tertiary">멤버 목록</p>
-                    <button
-                      onClick={openAddMember}
-                      className="text-xs px-2.5 py-1 rounded border border-border-default text-text-tertiary hover:text-accent-primary hover:border-accent-primary/40 transition-colors"
-                    >
-                      + 멤버 등록
-                    </button>
-                  </div>
-                  {membersLoading ? (
-                    <p className="text-xs text-text-tertiary">불러오는 중...</p>
-                  ) : genMembers.length === 0 ? (
-                    <p className="text-xs text-text-tertiary">등록된 멤버가 없습니다.</p>
-                  ) : (
-                    <div className="space-y-1">
-                      {genMembers.map((m) => (
-                        <div key={m.memberId} className="flex items-center gap-2 py-1.5 text-xs">
-                          <div className="w-6 h-6 rounded-full bg-bg-tertiary flex items-center justify-center overflow-hidden shrink-0">
-                            {m.profileImageUrl
-                              ? <img src={m.profileImageUrl} alt={m.name} className="w-full h-full object-cover" />
-                              : <span className="text-[10px] font-semibold text-text-tertiary">{m.name.slice(0, 1)}</span>
-                            }
-                          </div>
-                          <span className="text-text-primary">{m.name}</span>
-                          <span className="text-text-tertiary">{m.roleInGen === 'operating' ? '운영진' : '멤버'}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {showAddMember && (
-                    <form onSubmit={handleAddMember} className="mt-3 p-3 rounded-lg border border-border-default bg-bg-tertiary/30 space-y-3">
-                      <p className="text-xs font-medium text-text-primary">멤버 등록</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <select
-                          value={addMemberForm.memberId}
-                          onChange={(e) => setAddMemberForm((p) => ({ ...p, memberId: e.target.value ? Number(e.target.value) : '' }))}
-                          className="px-2 py-1.5 text-xs bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
-                          required
-                        >
-                          <option value="">멤버 선택</option>
-                          {allMembers.map((m) => (
-                            <option key={m.id} value={m.id}>{m.name}</option>
-                          ))}
-                        </select>
-                        <select
-                          value={addMemberForm.roleInGen}
-                          onChange={(e) => setAddMemberForm((p) => ({ ...p, roleInGen: e.target.value as GenerationRole }))}
-                          className="px-2 py-1.5 text-xs bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50"
-                        >
-                          {ROLE_OPTIONS.map((o) => (
-                            <option key={o.value} value={o.value}>{o.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      {addMemberError && <p className="text-xs text-red-400">{addMemberError}</p>}
+                ) : isMemberOpen ? (
+                  <div className="px-4 py-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-text-primary">{gen.number}기 멤버</span>
                       <div className="flex gap-2">
-                        <button type="button" onClick={() => setShowAddMember(false)} className="flex-1 py-1.5 text-xs rounded border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors">
-                          취소
-                        </button>
-                        <button type="submit" disabled={addMemberLoading} className="flex-1 py-1.5 text-xs rounded bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-40 transition-colors">
-                          {addMemberLoading ? '등록 중...' : '등록'}
-                        </button>
+                        <button onClick={openAddMember} className="text-xs px-2.5 py-1 rounded border border-border-default text-text-tertiary hover:text-accent-primary hover:border-accent-primary/40 transition-colors">+ 멤버 등록</button>
+                        <button onClick={() => setOpenPanel(null)} className="text-xs px-2.5 py-1 rounded border border-border-default text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50 transition-colors">닫기</button>
                       </div>
-                    </form>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+                    </div>
+                    {membersLoading ? (
+                      <p className="text-xs text-text-tertiary">불러오는 중...</p>
+                    ) : genMembers.length === 0 ? (
+                      <p className="text-xs text-text-tertiary">등록된 멤버가 없습니다.</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {genMembers.map((m) => (
+                          <div key={m.memberId} className="flex items-center gap-2 py-1.5 text-xs">
+                            <div className="w-6 h-6 rounded-full bg-bg-tertiary flex items-center justify-center overflow-hidden shrink-0">
+                              {m.profileImageUrl ? <img src={m.profileImageUrl} alt={m.name} className="w-full h-full object-cover" /> : <span className="text-[10px] font-semibold text-text-tertiary">{m.name.slice(0, 1)}</span>}
+                            </div>
+                            <span className="text-text-primary">{m.name}</span>
+                            <span className="text-text-tertiary">{m.roleInGen === 'operating' ? '운영진' : '멤버'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {showAddMember && (
+                      <form onSubmit={handleAddMember} className="p-3 rounded-lg border border-border-default bg-bg-tertiary/30 space-y-3">
+                        <p className="text-xs font-medium text-text-primary">멤버 등록</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <select value={addMemberForm.memberId} onChange={(e) => setAddMemberForm((p) => ({ ...p, memberId: e.target.value ? Number(e.target.value) : '' }))} className="px-2 py-1.5 text-xs bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50" required>
+                            <option value="">멤버 선택</option>
+                            {allMembers.map((m) => (<option key={m.id} value={m.id}>{m.name}</option>))}
+                          </select>
+                          <select value={addMemberForm.roleInGen} onChange={(e) => setAddMemberForm((p) => ({ ...p, roleInGen: e.target.value as GenerationRole }))} className="px-2 py-1.5 text-xs bg-bg-primary border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-primary/50">
+                            {ROLE_OPTIONS.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
+                          </select>
+                        </div>
+                        {addMemberError && <p className="text-xs text-red-400">{addMemberError}</p>}
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setShowAddMember(false)} className="flex-1 py-1.5 text-xs rounded border border-border-default text-text-secondary hover:bg-bg-tertiary/50 transition-colors">취소</button>
+                          <button type="submit" disabled={addMemberLoading} className="flex-1 py-1.5 text-xs rounded bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-40 transition-colors">{addMemberLoading ? '등록 중...' : '등록'}</button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-text-primary">{gen.number}기</span>
+                      {gen.isCurrent && (<span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent-primary/15 text-accent-primary">현재</span>)}
+                      <span className="text-xs text-text-tertiary">{gen.startDate}{gen.endDate ? ` ~ ${gen.endDate}` : ' ~ 진행중'}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => togglePanel(gen.number, 'member')} className="text-xs px-2.5 py-1 rounded border border-border-default text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50 transition-colors">멤버</button>
+                      <button onClick={() => togglePanel(gen.number, 'edit', gen)} className="text-xs px-2.5 py-1 rounded border border-border-default text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary/50 transition-colors">수정</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
