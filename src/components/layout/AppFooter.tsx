@@ -74,9 +74,7 @@ export function AppFooter() {
             {teams.map((t) => (
               <div key={t.team}>
                 <p className="text-accent-primary/40 mb-1"><span className="text-accent-primary/60 font-medium">{t.label}</span> · {t.team}</p>
-                <p className="text-text-tertiary/60">
-                  <TeamNames names={t.names} />
-                </p>
+                <TeamNames names={t.names} />
               </div>
             ))}
             <div>
