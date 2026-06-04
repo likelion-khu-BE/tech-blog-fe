@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { posts as initialPosts } from '../../data/session-mock'
 import type { Post, EventType, ViewMode } from '../../types/session'
+import { useAuth } from '../../contexts/AuthContext'
 
 type SubView = 'list' | 'post' | 'write' | 'edit'
 
@@ -196,6 +197,9 @@ function CommentItem({
   onAddReply?: (id: number, text: string) => void
   isReply?: boolean
 }) {
+  const { isAdmin } = useAuth()
+  const isMine = comment.author === '나'
+  const canModify = isAdmin || isMine
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState(comment.text)
   const [replying, setReplying] = useState(false)
@@ -269,18 +273,22 @@ function CommentItem({
                   답글
                 </button>
               )}
-              <button
-                onClick={() => setEditing(true)}
-                className="text-xs text-text-tertiary hover:text-text-secondary transition-colors"
-              >
-                수정
-              </button>
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="text-xs text-text-tertiary hover:text-red-400 transition-colors"
-              >
-                삭제
-              </button>
+              {canModify && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="text-xs text-text-tertiary hover:text-text-secondary transition-colors"
+                >
+                  수정
+                </button>
+              )}
+              {canModify && (
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="text-xs text-text-tertiary hover:text-red-400 transition-colors"
+                >
+                  삭제
+                </button>
+              )}
             </div>
           </div>
           {editing ? (
@@ -338,6 +346,9 @@ function CommentItem({
 
 // ─── 게시글 상세 ──────────────────────────────────────────────
 function PostDetail({ post, onBack, onEdit, onDelete }: { post: Post; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
+  const { isAdmin } = useAuth()
+  const isMine = post.author === '나'
+  const canModify = isAdmin || isMine
   const [liked, setLiked] = useState(true)
   const [likeCount, setLikeCount] = useState(post.likes)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -435,20 +446,22 @@ function PostDetail({ post, onBack, onEdit, onDelete }: { post: Post; onBack: ()
           <div className="text-sm font-medium text-text-primary">{post.author}</div>
           <div className="text-xs text-text-tertiary">{post.date}</div>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={onEdit}
-            className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors"
-          >
-            수정
-          </button>
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:text-red-400 hover:border-red-400/50 transition-colors"
-          >
-            삭제
-          </button>
-        </div>
+        {canModify && (
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={onEdit}
+              className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors"
+            >
+              수정
+            </button>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:text-red-400 hover:border-red-400/50 transition-colors"
+            >
+              삭제
+            </button>
+          </div>
+        )}
       </div>
 
       <div
