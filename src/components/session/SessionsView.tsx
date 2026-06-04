@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useAuth } from '../../contexts/AuthContext'
 import { sessions as initialSessions, notes, resources, retros } from '../../data/session-mock'
 import type { SessionItem, ResourceKind } from '../../types/session'
 
@@ -140,6 +141,7 @@ function SessionDetail({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const { isAdmin } = useAuth()
   const [tab, setTab] = useState<Tab>('notes')
   const [search, setSearch] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -207,20 +209,22 @@ function SessionDetail({
           세션 목록으로
         </button>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onEdit}
-            className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors"
-          >
-            수정
-          </button>
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:text-red-400 hover:border-red-400/50 transition-colors"
-          >
-            삭제
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onEdit}
+              className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors"
+            >
+              수정
+            </button>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:text-red-400 hover:border-red-400/50 transition-colors"
+            >
+              삭제
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mb-1">
